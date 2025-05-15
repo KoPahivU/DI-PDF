@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "compounds": [
+    {
+      "name": "Start Full Stack App",
+      "configurations": ["Frontend", "Backend"]
+    }
+  ],
+  "configurations": [
+    {
+      "name": "Frontend",
+      "type": "pwa-node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/PDF_Viewer",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Backend",
+      "type": "pwa-node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/PDF_Viewer_Backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start:dev"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    }
+  ]
+}

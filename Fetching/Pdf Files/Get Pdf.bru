@@ -1,0 +1,19 @@
+meta {
+  name: Get Pdf
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/pdf-files?id=6824b41c5bb88a52ebaad2cf
+  body: none
+  auth: bearer
+}
+
+params:query {
+  id: 6824b41c5bb88a52ebaad2cf
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImhvYW5nbGUyOTN2dUBnbWFpbC5jb20iLCJzdWIiOiI2ODI0YWVkYjQ4MzM1ZDk2YmNlN2YyZjAiLCJpYXQiOjE3NDcyMzQ1MjMsImV4cCI6MTc0OTgyNjUyM30.ZYAKCz8gxxLzszy36U3cP2pnk_aPfoSIxvqsDBgCoG0
+}

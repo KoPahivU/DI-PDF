@@ -1,0 +1,20 @@
+meta {
+  name: Upload Pdf
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/pdf-files/upload
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImhvYW5nbGUyOTN2dUBnbWFpbC5jb20iLCJzdWIiOiI2ODI0YWVkYjQ4MzM1ZDk2YmNlN2YyZjAiLCJpYXQiOjE3NDcyMzQ1MjMsImV4cCI6MTc0OTgyNjUyM30.ZYAKCz8gxxLzszy36U3cP2pnk_aPfoSIxvqsDBgCoG0
+}
+
+body:multipart-form {
+  fileSize: 10
+  file: @file(C:\Users\MSI\Downloads\Kết quả học tập.pdf)
+}

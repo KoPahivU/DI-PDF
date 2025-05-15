@@ -1,0 +1,17 @@
+meta {
+  name: Create a user
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/user
+  body: formUrlEncoded
+  auth: inherit
+}
+
+body:form-urlencoded {
+  gmail: hoangle293vu@gmail.com
+  fullName: Lê Vũ
+  password: 12345678
+}

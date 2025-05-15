@@ -1,0 +1,15 @@
+meta {
+  name: Verify Code
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/auth/verify-code?codeId=d721f499-d664-40ff-bfa9-8c47a61644da
+  body: none
+  auth: inherit
+}
+
+params:query {
+  codeId: d721f499-d664-40ff-bfa9-8c47a61644da
+}
