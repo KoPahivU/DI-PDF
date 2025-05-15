@@ -1,0 +1,20 @@
+meta {
+  name: Add Link
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/pdf-files/add-link-permission
+  body: formUrlEncoded
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImhvYW5nbGUyOTN2dUBnbWFpbC5jb20iLCJzdWIiOiI2ODI1OTZmNGQ2MmFhY2Y5MjdlNDI0ZWIiLCJpYXQiOjE3NDczMDAxNzYsImV4cCI6MTc0OTg5MjE3Nn0.65y6UI7YiDYxlMPBE5SfKTVGJZb8w2x8lWIQbxk7HNs
+}
+
+body:form-urlencoded {
+  fileId: 682598eead4bf167e4fb6fe1
+  access: Edit
+}

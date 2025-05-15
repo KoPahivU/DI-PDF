@@ -11,7 +11,7 @@ function Active() {
 
   useEffect(() => {
     if (codeId) {
-      fetch(`${process.env.BE_URI}/auth/verify-code?codeId=${codeId}`, {
+      fetch(`${process.env.REACT_APP_BE_URI}/auth/verify-code?codeId=${codeId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

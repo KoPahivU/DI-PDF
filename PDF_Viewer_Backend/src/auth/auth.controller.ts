@@ -1,20 +1,5 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-  Request,
-  Query,
-  Put,
-  Req,
-  Res,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Query, Req, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LocalAuthGuard } from './passport/local-auth.guard';
 import { Public } from '@/common/decorator/customize';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { GoogleAuthGuard } from './guards/google-auth/google-auth.guard';
@@ -67,9 +52,9 @@ export class AuthController {
     console.log(req);
     if (!req.user) {
       console.log('Google authentication failed, redirecting to sign in...');
-      return res.redirect(`${process.env.FE_URI}/auth/signin?error='This is a Default accout'`);
+      return res.redirect(`${process.env.FE_URI}/auth/signin?error=default-account`);
     }
-    const payload = { username: req.user.gmail, sub: req.user._id };
+    const payload = { username: req.user.user.gmail, sub: req.user.user._id };
     const jwt = this.jwtService.sign(payload);
     console.log(`Redirecting to: ${process.env.FE_URI}/auth?token=${jwt}`);
 

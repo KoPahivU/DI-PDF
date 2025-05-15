@@ -9,6 +9,6 @@ export class UnauthorizedRedirectFilter implements ExceptionFilter {
 
     console.log('Unauthorized access detected. Redirecting to login page.');
 
-    response.redirect(`${process.env.FE_URI}/auth/login`);
+    response.redirect(`${process.env.FE_URI}/auth/signin?error=default-account`);
   }
 }

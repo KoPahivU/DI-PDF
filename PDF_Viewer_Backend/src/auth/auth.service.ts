@@ -21,7 +21,7 @@ export class AuthService {
     private readonly mailerService: MailerService,
   ) {}
 
-  async validateUser(gmail: string, pass: string): Promise<any> {
+  async validateUser(gmail: string, pass: string): Promise<User | null> {
     const user = await this.userService.findByGmail(gmail);
 
     if (!user) {
@@ -155,7 +155,7 @@ export class AuthService {
       };
     }
 
-    return await this.userModel.create({
+    const newUser = await this.userModel.create({
       gmail: googleUser.gmail,
       fullName: googleUser.fullName,
       avatar: googleUser.avatar,
@@ -163,5 +163,10 @@ export class AuthService {
       isActive: true,
       usedStorage: 0,
     });
+
+    return {
+      newUser,
+      access_token: this.jwtService.sign({ username: newUser.gmail, sub: newUser._id }),
+    };
   }
 }

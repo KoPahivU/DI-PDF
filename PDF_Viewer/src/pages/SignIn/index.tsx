@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import logo from '~/assets/images/logo.png';
 import styles from './SignIn.module.scss';
 import classNames from 'classnames/bind';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Cookies from 'js-cookie';
 
 const cx = classNames.bind(styles);
@@ -30,6 +30,10 @@ function SignIn() {
 
   const [wrongPasswordInput, setWrongPasswordInput] = useState(false);
   const [passwordField, setPasswordField] = useState('');
+
+  const [searchParams] = useSearchParams();
+  const [error, setError] = useState(searchParams.get('error')?.trim());
+  console.log(error, typeof error);
 
   const refs = {
     emailRef: useRef<HTMLInputElement>(null),
@@ -57,7 +61,7 @@ function SignIn() {
     if (!wrongEmailInput && !wrongPasswordInput) {
       setIsLoading(true);
       try {
-        const res = await fetch(`${process.env.BE_URI}/api/auth/login`, {
+        const res = await fetch(`${process.env.REACT_APP_BE_URI}/auth/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -80,6 +84,8 @@ function SignIn() {
             setEmailField(errorData.message);
             setWrongEmailInput(true);
             return;
+          } else if (errorData.message === 'This is a google login account.') {
+            setError('gmail-account');
           }
           throw new Error(errorData.message || 'Invalid credentials');
         }
@@ -122,7 +128,7 @@ function SignIn() {
         </div>
 
         <a
-          href={`${process.env.BE_URI}/api/auth/google/callback`}
+          href={`${process.env.REACT_APP_BE_URI}/auth/google/callback`}
           target="_blank"
           rel="noopener noreferrer"
           className={cx('google-button')}
@@ -140,6 +146,20 @@ function SignIn() {
           <span className={cx('or-text')}>or</span>
           <span className={cx('line')}></span>
         </div>
+
+        {error === 'default-account' && (
+          <div className={cx('error-text')}>
+            <span>
+              This email address is currently being used with email & password. Please sign in with email & password
+            </span>
+          </div>
+        )}
+
+        {error === 'gmail-account' && (
+          <div className={cx('error-text')}>
+            <span>This email address is associated with a Google account. Please sign in using Google Sign-In.</span>
+          </div>
+        )}
 
         <div className={cx('container')}>
           <div className={cx('describe')}>

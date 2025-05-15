@@ -10,9 +10,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { UserModule } from './module/user/user.module';
 import { CloudinaryModule } from './common/cloudinary/cloudinary.module';
 import { AuthModule } from './auth/auth.module';
-import { PdfUploadModule } from './module/pdf-upload/pdf-upload.module';
 import { PdfFilesModule } from './module/pdf-files/pdf-files.module';
-import { PermissionsModule } from './module/permissions/permissions.module';
 
 @Module({
   imports: [
@@ -57,9 +55,7 @@ import { PermissionsModule } from './module/permissions/permissions.module';
     UserModule,
     AuthModule,
     CloudinaryModule,
-    PdfUploadModule,
     PdfFilesModule,
-    PermissionsModule,
   ],
   controllers: [AppController],
   providers: [

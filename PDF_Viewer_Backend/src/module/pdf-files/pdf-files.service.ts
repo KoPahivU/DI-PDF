@@ -2,11 +2,14 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreatePdfFileDto } from './dto/create-pdf-file.dto';
 import { UpdatePdfFileDto } from './dto/update-pdf-file.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { PdfFile } from './schemas/pdf-file.schema';
-import { Model, ObjectId } from 'mongoose';
+import { AccessLevel, PdfFile, SharedLink, SharedUser } from './schemas/pdf-file.schema';
+import { Model, ObjectId, Types } from 'mongoose';
 import { User } from '../user/schemas/user.schema';
 import { CloudinaryService } from '@/common/cloudinary/cloudinary.service';
 import { UploadApiResponse } from 'cloudinary';
+import { AddUserPermissionDto } from './dto/add-user-permission.dto';
+import { v4 as uuidv4 } from 'uuid';
+import { AddLinkPermissionDto } from './dto/add-link-permission';
 
 @Injectable()
 export class PdfFilesService {
@@ -43,15 +46,124 @@ export class PdfFilesService {
     };
   }
 
-  async getPdf(fileId: string) {
-    console.log('fileId: ', fileId);
+  async getPdf(fileId: string, userId: Types.ObjectId | string, shared: string) {
     const file = await this.pdfFileModel.findById(fileId);
 
     if (!file) throw new BadRequestException('File id not found');
 
+    const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+
+    const sharedPermission = file.sharedLink.find((token) => token.token === shared);
+
+    console.log(sharedPermission);
+
+    if (userObjectId !== file.ownerId && !sharedPermission) throw new BadRequestException('You have no permission');
+
+    if (shared) {
+      const sharedItem = file.sharedLink.find((link) => link.token === shared);
+
+      if (sharedItem) {
+        const sharedUser = file.sharedWith.find((user) => user.userId === userObjectId);
+        if (sharedUser) {
+          sharedUser.access = sharedItem.access;
+        } else {
+          file.sharedWith.push({
+            userId: userObjectId,
+            access: sharedItem.access,
+          });
+        }
+
+        file.markModified('sharedWith');
+        await file.save();
+      }
+      return {
+        file: file,
+        access: sharedItem?.access,
+      };
+    }
+
     return {
-      storagePath: file.storagePath,
+      file: file,
+      access: 'Owner',
     };
+  }
+
+  async addUserPermission(userId: string | Types.ObjectId, userPermission: AddUserPermissionDto) {
+    const file = await this.pdfFileModel.findById(userPermission.fileId);
+
+    if (!file) throw new BadRequestException('File id not found');
+
+    const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+    const targetUserObjectId =
+      typeof userPermission.userId === 'string' ? new Types.ObjectId(userPermission.userId) : userPermission.userId;
+
+    if (!file) throw new BadRequestException('File id not found');
+
+    const isOwner = file.ownerId === userId;
+    const permission = file.sharedWith.find((sharedUser) => sharedUser.userId.equals(userObjectId));
+    if (!isOwner && permission?.access !== 'Edit') throw new BadRequestException('You have no permission');
+
+    const sharedUser = file.sharedWith.find((user) => user.userId.equals(targetUserObjectId));
+    if (sharedUser) {
+      sharedUser.access = userPermission.access;
+    } else {
+      const newData = {
+        userId: targetUserObjectId,
+        access: userPermission.access,
+      };
+      file.sharedWith.push(newData as SharedUser);
+    }
+
+    file.markModified('sharedWith');
+    await file.save();
+  }
+
+  async addLinkPermission(userId: string | Types.ObjectId, addLinkPermission: AddLinkPermissionDto) {
+    const file = await this.pdfFileModel.findById(addLinkPermission.fileId);
+
+    if (!file) throw new BadRequestException('File id not found');
+
+    const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+    const isOwner = userId === file.ownerId;
+    const permission = file.sharedWith.find((sharedUser) => sharedUser.userId.equals(userObjectId));
+    if (!isOwner && permission?.access !== 'Edit') throw new BadRequestException('You have no permission');
+
+    const existedLink = file.sharedLink.find((link) => link.access === addLinkPermission.access);
+    if (existedLink) {
+      return existedLink;
+    } else {
+      let token: string;
+      const existingTokens = new Set(file.sharedLink.map((link) => link.token));
+
+      do {
+        token = uuidv4();
+      } while (existingTokens.has(token));
+
+      const newData = { token, access: addLinkPermission.access };
+
+      file.sharedLink.push(newData);
+      file.markModified('sharedLink');
+      await file.save();
+
+      return newData;
+    }
+  }
+
+  async removeUserPermission(
+    removedUser: string | Types.ObjectId,
+    userId: string | Types.ObjectId,
+    fileId: string | Types.ObjectId,
+  ) {
+    const file = await this.pdfFileModel.findById(fileId);
+
+    if (!file) throw new BadRequestException('File id not found');
+
+    const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+    const isOwner = userId === file.ownerId;
+    const permission = file.sharedWith.find((sharedUser) => sharedUser.userId.equals(userObjectId));
+    if ((!isOwner && permission?.access !== 'Edit') || userId === removedUser || removedUser === file.ownerId)
+      throw new BadRequestException('You have no permission');
+    
   }
 
   create(createPdfFileDto: CreatePdfFileDto) {

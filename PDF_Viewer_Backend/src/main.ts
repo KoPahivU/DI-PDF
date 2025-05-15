@@ -8,7 +8,7 @@ import { useContainer } from 'class-validator';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.useGlobalInterceptors(new ResponseInterceptor()); // 💡 Áp dụng interceptor toàn bộ app
+  app.useGlobalInterceptors(new ResponseInterceptor());
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT');
 

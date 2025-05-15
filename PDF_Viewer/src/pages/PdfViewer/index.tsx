@@ -1,24 +1,51 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Document, Page } from 'react-pdf';
-import styles from "./PdfViewer.module.scss"
-import classNames from "classnames/bind"
+import styles from './PdfViewer.module.scss';
+import classNames from 'classnames/bind';
+import Cookies from 'js-cookie';
+import { useParams, useSearchParams } from 'react-router-dom';
 
-const cx = classNames.bind(styles)
+const cx = classNames.bind(styles);
 
 const PdfViewer: React.FC = () => {
-  const [pdfData, setPdfData] = useState<string | null>(
-    'https://res.cloudinary.com/dgfmpovjz/raw/upload/v1747272641/lawr4vvuhc5w69ryhpzx.pdf',
-  );
-  // const [numPages, setNumPages] = useState<number>(0);
+  const token = Cookies.get('DITokens');
+  const { id } = useParams();
 
-  //   useEffect(() => {
-  //     fetch('http://localhost:3000/pdf') // endpoint từ server NestJS
-  //       .then((response) => response.arrayBuffer())
-  //       .then((data) => setPdfData(data))
-  //       .catch((error) => console.error('Error fetching PDF:', error));
-  //   }, []);
-
+  const [pdfData, setPdfData] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
+
+  const getPdf = async () => {
+    try {
+      // console.log('URL: ', `${process.env.REACT_APP_BE_URI}/pdf-files/${id}`);
+      const res = await fetch(`${process.env.REACT_APP_BE_URI}/pdf-files/${id}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.log('Error Response:', errorData);
+        // if (errorData.message === 'File id not found') {
+        //   console.log(err)
+        // } else if (errorData.message === 'You have no permission') {
+
+        // }
+        throw new Error(errorData.message || 'Invalid credentials');
+      }
+
+      const responseData = await res.json();
+      console.log('Response: ', responseData.data);
+    } catch (error) {
+      console.error('Post subject error:', error);
+      return;
+    }
+  };
+
+  useEffect(() => {
+    getPdf();
+  }, []);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -26,7 +53,6 @@ const PdfViewer: React.FC = () => {
 
   return (
     <div className={cx('wrapper')}>
-
       <div className={cx('pdf-section')}>
         {pdfData ? (
           <Document file={pdfData} onLoadSuccess={onDocumentLoadSuccess}>

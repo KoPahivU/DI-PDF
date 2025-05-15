@@ -2,13 +2,12 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types, Schema as MongooseSchema } from 'mongoose';
 
 export enum AccessLevel {
-  VIEW = 'view',
-  EDIT = 'edit',
-  COMMENT = 'comment',
+  VIEW = 'View',
+  EDIT = 'Edit',
 }
 
 @Schema()
-class SharedUser {
+export class SharedUser {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
   userId: Types.ObjectId;
 
@@ -17,10 +16,7 @@ class SharedUser {
 }
 
 @Schema()
-class SharedLink {
-  @Prop({ default: false })
-  enabled: boolean;
-
+export class SharedLink {
   @Prop({ enum: AccessLevel, default: AccessLevel.VIEW })
   access: AccessLevel;
 
@@ -51,7 +47,9 @@ export class PdfFile {
   @Prop({ type: [SharedUser], default: [] })
   sharedWith: SharedUser[];
 
-  @Prop({ type: SharedLink, default: () => ({}) })
-  sharedLink: SharedLink;
+  @Prop({ type: [SharedLink], default: [] })
+  sharedLink: SharedLink[];
 }
 export const PdfFileSchema = SchemaFactory.createForClass(PdfFile);
+export const SharedUserSchema = SchemaFactory.createForClass(SharedUser);
+export const SharedLinkSchema = SchemaFactory.createForClass(SharedLink);

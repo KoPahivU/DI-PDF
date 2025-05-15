@@ -83,7 +83,7 @@ function SignUp() {
     if (!wrongEmailInput && !wrongFullNameInput && !wrongPasswordInput && !wrongReTypePasswordInput) {
       setIsLoading(true);
       try {
-        const res = await fetch(`${process.env.BE_URI}/api/auth/register`, {
+        const res = await fetch(`${process.env.REACT_APP_BE_URI}/auth/register`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -138,7 +138,7 @@ function SignUp() {
 
   const handleResendGmail = async () => {
     try {
-      const res = await fetch(`${process.env.BE_URI}/api/auth/send-link`, {
+      const res = await fetch(`${process.env.REACT_APP_BE_URI}/auth/send-link`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -178,7 +178,7 @@ function SignUp() {
         </div>
 
         <a
-          href={`${process.env.BE_URI}/api/auth/google/callback`}
+          href={`${process.env.REACT_APP_BE_URI}/auth/google/callback`}
           target="_blank"
           rel="noopener noreferrer"
           className={cx('google-button')}
@@ -196,6 +196,12 @@ function SignUp() {
           <span className={cx('or-text')}>or</span>
           <span className={cx('line')}></span>
         </div>
+
+        {/* {error === 'gmail-account' && (
+          <div className={cx('error-text')}>
+            <span>This email address is associated with a Google account. Please sign in using Google Sign-In.</span>
+          </div>
+        )} */}
 
         <div className={cx('container')}>
           <div className={cx('describe')}>

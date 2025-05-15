@@ -22,10 +22,10 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
   async validate(accessToken: string, refreshToken: string, profile: any, done: VerifyCallBack) {
     try {
       const email = profile.emails[0].value;
-
+      console.log(profile);
       const user = await this.authService.validateGoogleUser({
         gmail: email,
-        fullName: `${profile.name?.familyName} ${profile.name?.givenName}`,
+        fullName: `${profile.name?.givenName}`,
         avatar: profile.photos?.[0]?.value || '',
       });
       done(null, user);

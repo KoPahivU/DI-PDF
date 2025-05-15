@@ -16,7 +16,8 @@ import { CreatePdfFileDto } from './dto/create-pdf-file.dto';
 import { UpdatePdfFileDto } from './dto/update-pdf-file.dto';
 import { diskStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ObjectId } from 'mongoose';
+import { AddUserPermissionDto } from './dto/add-user-permission.dto';
+import { AddLinkPermissionDto } from './dto/add-link-permission';
 
 @Controller('pdf-files')
 export class PdfFilesController {
@@ -37,9 +38,19 @@ export class PdfFilesController {
     return await this.pdfFilesService.uploadPdf(file, req.user._id, fileSize);
   }
 
-  @Get()
-  async getPdf(@Query('id') id: string) {
-    return await this.pdfFilesService.getPdf(id);
+  @Get(':id')
+  async getPdf(@Param('id') id: string, @Request() req, @Query('shared') shared: string) {
+    return await this.pdfFilesService.getPdf(id, req.user._id, shared);
+  }
+
+  @Post('add-user-permission')
+  async addUserPermission(@Request() req, @Body() userPermission: AddUserPermissionDto) {
+    return await this.pdfFilesService.addUserPermission(req.user._id, userPermission);
+  }
+
+  @Post('add-link-permission')
+  async addLinkPermission(@Request() req, @Body() addLinkPermission: AddLinkPermissionDto) {
+    return await this.pdfFilesService.addLinkPermission(req.user._id, addLinkPermission);
   }
 
   @Post()

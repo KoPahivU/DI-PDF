@@ -1,0 +1,30 @@
+meta {
+  name: Add User Permission
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/pdf-files/add-user-permission
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NDcyOTgzOTcsImV4cCI6MTc0OTg5MDM5N30.6FZxLw4_OwCryxFQAdk3gqzh194MdMv_KPMK34lzYeg
+}
+
+body:json {
+  {
+    "fileId": "682598eead4bf167e4fb6fe1",
+    "userId": "6825a5e627574159ce25dd61",
+    "access": "EDIT"
+  }
+  
+}
+
+body:form-urlencoded {
+  fileId: 682598eead4bf167e4fb6fe1
+  userId: 6825a5e627574159ce25dd61
+  access: EDIT
+}

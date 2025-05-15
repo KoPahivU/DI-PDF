@@ -5,20 +5,12 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { Response } from 'express';
 
-@Controller('uploads')
+@Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
   @Public()
   getPDF(@Res() res: Response) {
-    const decodedFilename = decodeURIComponent('Vu, Le Hoang - DSV406 - May 12, 2025 - NDA.docx.pdf');
-    const filePath = path.join(__dirname, '..', 'uploads', decodedFilename);
-
-    if (fs.existsSync(filePath)) {
-      res.sendFile(filePath);
-    } else {
-      res.status(404).send('File not found');
-    }
   }
 }
