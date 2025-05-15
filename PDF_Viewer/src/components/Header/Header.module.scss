@@ -1,0 +1,108 @@
+.wrapper {
+  position: fixed;
+  background-color: #f5c731;
+  opacity: 0.8;
+  height: 60px;
+  width: 100%;
+  z-index: 10;
+  align-items: center;
+  display: flex;
+  padding: 0 20px;
+}
+
+.left-header {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.logo {
+  height: 45px;
+  width: 45px;
+}
+
+.name {
+  color: white;
+}
+
+.right-header {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.sign-in {
+  font-size: 1.6rem;
+  color: white;
+  cursor: pointer;
+  border: 1px solid white;
+  padding: 7px;
+  border-radius: 10px;
+}
+.sign-up {
+  font-size: 1.6rem;
+  color: white;
+  padding: 7px;
+  cursor: pointer;
+}
+
+.avatar {
+  height: 37px;
+  width: 37px;
+  cursor: pointer;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.dropdown {
+  position: absolute;
+  top: 70px;
+  right: 20px;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  z-index: 20;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile {
+  background: none;
+  border: none;
+  color: #333;
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #eee;
+  }
+}
+
+.user-icon {
+  margin-right: 8px;
+}
+
+.logout {
+  background: none;
+  border: none;
+  color: #b61616;
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #eee;
+  }
+}
+
+.out-icon {
+  margin-right: 8px;
+}

@@ -1,0 +1,304 @@
+.wrapper {
+  position: absolute;
+  top: 2%;
+  height: 95%;
+  min-height: 600px;
+  width: 30vw;
+  right: 8vw;
+  background-color: white;
+  border-radius: 15px;
+  border: 0.5px solid rgba(162, 162, 162, 0.5);
+}
+
+.form {
+  margin: 25px 30px;
+}
+
+.form-header {
+  display: flex;
+  justify-self: center;
+  align-items: center;
+}
+.header-logo {
+  height: 48px;
+  width: 48px;
+  padding-right: 5px;
+}
+
+.google-button {
+  display: flex;
+  padding: 8px;
+  margin-top: 20px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(104, 103, 103, 0.5);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    border: 1.5px solid black;
+  }
+
+  :hover .google-text {
+    font-weight: 500;
+  }
+}
+
+.google-img {
+  padding-right: 10px;
+}
+.google-text {
+  font-size: 2rem;
+  font-weight: 400;
+}
+
+.separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.line {
+  flex: 1;
+  height: 0.4px;
+  background-color: #ccc;
+  margin: 0 10px;
+}
+
+.or-text {
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+}
+
+.container {
+  margin-bottom: 5px;
+}
+
+.describe {
+  display: flex;
+  gap: 5px;
+}
+
+.text {
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: black;
+}
+
+.symbol {
+  font-size: 1.8rem;
+  font-weight: 400;
+  color: red;
+}
+
+.input {
+  padding: 10px;
+  border: 1.5px solid rgba(104, 103, 103, 0.5);
+  border-radius: 5px;
+  width: 100%;
+  display: flex;
+
+  &.input-error {
+    border: 1.5px solid #900b09 !important;
+  }
+}
+
+.error {
+  visibility: hidden;
+  height: 1rem;
+  font-size: 1rem;
+  font-weight: 400;
+  color: #900b09;
+
+  &.show {
+    visibility: visible;
+  }
+}
+
+.input-password {
+  display: flex;
+  width: 100%;
+}
+
+.toggle-visbility {
+  cursor: pointer;
+}
+
+.accept-box {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.accept-box * {
+  font-size: 1.3rem;
+  font-weight: 500;
+}
+
+.bold {
+  font-weight: 700;
+}
+
+.sign-button {
+  margin-top: 20px;
+  background-color: #f5c731;
+  padding: 11px;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 600;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+
+  &.disable {
+    cursor: not-allowed;
+  }
+}
+
+.form-footer {
+  width: 100%;
+  margin-top: 20px;
+  justify-items: center;
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  gap: 5px;
+}
+
+.describe {
+  font-size: 1.5rem;
+  color: rgba(104, 103, 103, 0.5);
+}
+
+.button {
+  font-size: 1.5rem;
+  cursor: pointer;
+
+  &:hover {
+    color: #f5c731;
+  }
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  .spinner {
+    border: 6px solid #f3f3f3;
+    border-top: 6px solid #f5c731;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+  }
+
+  p {
+    color: white;
+    margin-top: 12px;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(61, 61, 61, 0.5);
+  z-index: 999;
+}
+
+.success-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border: 5px solid #f5c731;
+  padding: 20px 30px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  font-size: 18px;
+  /* animation: fadeInOut 2s ease-in-out; */
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+.exit {
+  margin-left: auto;
+  display: block;
+  cursor: pointer;
+}
+
+.image {
+  display: block;
+  margin: 0 auto;
+}
+
+.email-text {
+  display: flex;
+  max-width: 500px;
+  justify-items: center;
+  text-align: center;
+
+  * {
+    font-size: 1.3rem;
+  }
+}
+
+.resend {
+  display: flex;
+  text-align: center;
+  justify-items: center;
+  justify-self: center;
+  margin-top: 10px;
+  gap: 5px;
+
+  * {
+    font-size: 1.2rem;
+  }
+}
+
+.link {
+  cursor: pointer;
+  color: #f5c731;
+}
