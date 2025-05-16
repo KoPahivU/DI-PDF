@@ -12,12 +12,14 @@ import {
   Query,
 } from '@nestjs/common';
 import { PdfFilesService } from './pdf-files.service';
-import { CreatePdfFileDto } from './dto/create-pdf-file.dto';
+import { CreatePdfFileDto } from './dto/create-pdf-file.dto.dto';
 import { UpdatePdfFileDto } from './dto/update-pdf-file.dto';
 import { diskStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AddUserPermissionDto } from './dto/add-user-permission.dto';
-import { AddLinkPermissionDto } from './dto/add-link-permission';
+import { AddLinkPermissionDto } from './dto/add-link-permission.dto';
+import { DeleteUserPermissionDto } from './dto/delete-user-permisson.dto';
+import { Public } from '@/common/decorator/customize';
 
 @Controller('pdf-files')
 export class PdfFilesController {
@@ -27,7 +29,6 @@ export class PdfFilesController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: 'D:/uploads/',
         filename: (req, file, cb) => {
           cb(null, file.originalname);
         },
@@ -39,8 +40,9 @@ export class PdfFilesController {
   }
 
   @Get(':id')
+  // @Public()
   async getPdf(@Param('id') id: string, @Request() req, @Query('shared') shared: string) {
-    return await this.pdfFilesService.getPdf(id, req.user._id, shared);
+    return await this.pdfFilesService.getPdf(id, req?.user?._id, shared);
   }
 
   @Post('add-user-permission')
@@ -51,6 +53,19 @@ export class PdfFilesController {
   @Post('add-link-permission')
   async addLinkPermission(@Request() req, @Body() addLinkPermission: AddLinkPermissionDto) {
     return await this.pdfFilesService.addLinkPermission(req.user._id, addLinkPermission);
+  }
+
+  @Patch('update-user-permission')
+  async updateUserPermission(@Request() req) {}
+
+  @Delete('delete-user-permission')
+  async removeUserPermission(@Request() req, @Body() body: DeleteUserPermissionDto) {
+    return await this.removeUserPermission(req.user._id, body);
+  }
+
+  @Delete('delete-link-permission')
+  async removeLinkPermission(@Request() req, @Body() body: DeleteUserPermissionDto) {
+    return await this.removeLinkPermission(req.user._id, body);
   }
 
   @Post()

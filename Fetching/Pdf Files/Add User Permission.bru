@@ -6,25 +6,24 @@ meta {
 
 post {
   url: {{baseUrl}}/pdf-files/add-user-permission
-  body: json
+  body: formUrlEncoded
   auth: bearer
 }
 
 auth:bearer {
-  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NDcyOTgzOTcsImV4cCI6MTc0OTg5MDM5N30.6FZxLw4_OwCryxFQAdk3gqzh194MdMv_KPMK34lzYeg
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImhvYW5nbGUyOTN2dUBnbWFpbC5jb20iLCJzdWIiOiI2ODI1OTZmNGQ2MmFhY2Y5MjdlNDI0ZWIiLCJpYXQiOjE3NDczMDAxNzYsImV4cCI6MTc0OTg5MjE3Nn0.65y6UI7YiDYxlMPBE5SfKTVGJZb8w2x8lWIQbxk7HNs
 }
 
 body:json {
   {
     "fileId": "682598eead4bf167e4fb6fe1",
     "userId": "6825a5e627574159ce25dd61",
-    "access": "EDIT"
+    "access": 'edit'
   }
-  
 }
 
 body:form-urlencoded {
   fileId: 682598eead4bf167e4fb6fe1
   userId: 6825a5e627574159ce25dd61
-  access: EDIT
+  access: Edit
 }

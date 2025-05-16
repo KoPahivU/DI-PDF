@@ -1,0 +1,39 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(61, 61, 61, 0.5);
+  z-index: 999;
+}
+
+.upload-popup {
+  width: 40%;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border: 5px solid #f5c731;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  font-size: 18px;
+}
+
+.exit {
+  margin-left: auto;
+  display: block;
+  cursor: pointer;
+}
+
+.change-fullname {
+  margin-top: 10px;
+  width: 100%;
+  border: 1.6px solid rgb(76, 76, 76);
+  font-size: 1.5rem;
+  padding: 7px;
+  border-radius: 7px;
+}

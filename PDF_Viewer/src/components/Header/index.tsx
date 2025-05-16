@@ -17,7 +17,7 @@ interface HeaderProps {
 function Header({ token }: HeaderProps) {
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement | null>(null);
-
+  const [profile, setProfile] = useState<any>(null);
 
   const handleLogout = () => {
     Cookies.remove('DITokens');
@@ -27,7 +27,61 @@ function Header({ token }: HeaderProps) {
 
   const [hiddenBox, setHiddenBox] = useState<boolean>(false);
 
+  const getProfile = async () => {
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BE_URI}/user/profile`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.log('Error Response:', errorData);
+        throw new Error(errorData.message || 'Invalid credentials');
+      }
+
+      const responseData = await res.json();
+      // console.log('Response: ', responseData.data);
+      setProfile(responseData.data);
+    } catch (error) {
+      console.error('Post subject error:', error);
+      return;
+    }
+  };
+
+  const get = async () => {
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BE_URI}/user/profile`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.log('Error Response:', errorData);
+        throw new Error(errorData.message || 'Invalid credentials');
+      }
+
+      const responseData = await res.json();
+      console.log('Response: ', responseData.data);
+      setProfile(responseData.data);
+    } catch (error) {
+      console.error('Post subject error:', error);
+      return;
+    }
+  };
+
   useEffect(() => {
+    const profile = async () => {
+      await getProfile();
+    };
+
+    profile();
+
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setHiddenBox(false);
@@ -59,7 +113,11 @@ function Header({ token }: HeaderProps) {
         <div className={cx('right-header')} ref={dropdownRef}>
           <img
             className={cx('avatar')}
-            src="https://i.pinimg.com/736x/5e/e0/82/5ee082781b8c41406a2a50a0f32d6aa6.jpg"
+            src={
+              profile?.avatar !== undefined && profile?.avatar === ''
+                ? profile.avatar
+                : 'https://i.pinimg.com/736x/5e/e0/82/5ee082781b8c41406a2a50a0f32d6aa6.jpg'
+            }
             alt="Avatar"
             onClick={() => setHiddenBox(!hiddenBox)}
           />

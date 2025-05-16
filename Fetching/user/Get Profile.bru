@@ -1,17 +1,13 @@
 meta {
-  name: Get Link
+  name: Get Profile
   type: http
-  seq: 5
+  seq: 2
 }
 
 get {
-  url: {{baseUrl}}/pdf-files/682598eead4bf167e4fb6fe1?shared=2363078c-d528-4920-8d9a-1976bbf4c1ba
-  body: formUrlEncoded
+  url: {{baseUrl}}/user/profile
+  body: none
   auth: bearer
-}
-
-params:query {
-  shared: 2363078c-d528-4920-8d9a-1976bbf4c1ba
 }
 
 auth:bearer {

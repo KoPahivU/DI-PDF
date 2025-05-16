@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, ObjectId, Types } from 'mongoose';
 import { User } from './schemas/user.schema';
 import { MailerService } from '@nestjs-modules/mailer';
 import { hashPasswordHelper } from '@/common/helpers/util';
@@ -10,12 +10,17 @@ import dayjs from 'dayjs';
 import { CreateAuthDto } from '@/auth/dto/create-auth.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { JwtService } from '@nestjs/jwt';
+import { SearchFileDto } from './dto/search-file.dto';
+import { PdfFile } from '../pdf-files/schemas/pdf-file.schema';
+import { PaginationDto } from '@/common/dto/pagination.dto';
 
 @Injectable()
 export class UserService {
   constructor(
+    @InjectModel(PdfFile.name)
+    private pdfFileModel: Model<PdfFile>,
     @InjectModel(User.name)
-    private userModel: Model<User>,
+    private readonly userModel: Model<User>,
     private jwtService: JwtService,
     private readonly mailerService: MailerService,
   ) {}
@@ -43,6 +48,42 @@ export class UserService {
 
     return {
       user,
+    };
+  }
+
+  async getProfile(userId: string | Types.ObjectId) {
+    const user = this.userModel.findById(userId);
+
+    if (!user) throw new BadRequestException('User not found.');
+
+    return user;
+  }
+
+  async searchUser(search: SearchFileDto, paginationDto: PaginationDto) {
+    const file = await this.pdfFileModel.findById(search.fileId);
+    const { page = 1, limit = 10 } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    if (!file) throw new BadRequestException('File not found.');
+
+    const excludedUserIds = [file.ownerId, ...file.sharedWith.map((u) => u.userId)];
+
+    const user = await this.userModel
+      .find({
+        $and: [{ _id: { $ne: excludedUserIds } }, { gmail: search.searchInput }],
+      })
+      .skip(skip)
+      .limit(limit);
+    const total = await this.userModel
+      .find({
+        $and: [{ _id: { $ne: excludedUserIds } }, { gmail: search.searchInput }],
+      })
+      .countDocuments();
+
+    return {
+      user,
+      totalRecord: total,
+      totalPages: Math.ceil(total / limit),
     };
   }
 

@@ -11,6 +11,7 @@ import { UserModule } from './module/user/user.module';
 import { CloudinaryModule } from './common/cloudinary/cloudinary.module';
 import { AuthModule } from './auth/auth.module';
 import { PdfFilesModule } from './module/pdf-files/pdf-files.module';
+import { RecentDocumentModule } from './module/recent-document/recent-document.module';
 
 @Module({
   imports: [
@@ -31,8 +32,6 @@ import { PdfFilesModule } from './module/pdf-files/pdf-files.module';
           host: 'smtp.gmail.com',
           port: 465,
           secure: true,
-          // ignoreTLS: true,
-          // secure: false,
           auth: {
             user: configService.get<string>('MAIL_USER'),
             pass: configService.get<string>('MAIL_PASSWORD'),
@@ -44,7 +43,7 @@ import { PdfFilesModule } from './module/pdf-files/pdf-files.module';
         // preview: true,
         template: {
           dir: process.cwd() + '/src/mail/templates/',
-          adapter: new HandlebarsAdapter(), // or new PugAdapter() or new EjsAdapter()
+          adapter: new HandlebarsAdapter(),
           options: {
             strict: true,
           },
@@ -56,6 +55,7 @@ import { PdfFilesModule } from './module/pdf-files/pdf-files.module';
     AuthModule,
     CloudinaryModule,
     PdfFilesModule,
+    RecentDocumentModule,
   ],
   controllers: [AppController],
   providers: [

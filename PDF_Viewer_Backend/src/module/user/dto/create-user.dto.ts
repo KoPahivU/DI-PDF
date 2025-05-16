@@ -12,7 +12,4 @@ export class CreateUserDto {
 
   @IsOptional()
   avatar: string;
-
-  //   @Prop() //ADMIN, USER
-  //   role: string;
 }

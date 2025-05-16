@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { PdfFilesService } from './pdf-files.service';
 import { PdfFilesController } from './pdf-files.controller';
 import { UserModule } from '../user/user.module';
@@ -11,8 +11,13 @@ import { PdfFile, PdfFileSchema } from './schemas/pdf-file.schema';
 import { CloudinaryModule } from '@/common/cloudinary/cloudinary.module';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: PdfFile.name, schema: PdfFileSchema }]), UserModule, CloudinaryModule],
+  imports: [
+    MongooseModule.forFeature([{ name: PdfFile.name, schema: PdfFileSchema }]),
+    forwardRef(() => UserModule),
+    CloudinaryModule,
+  ],
   controllers: [PdfFilesController, AuthController],
   providers: [PdfFilesService, AuthService, JwtStrategy, LocalStrategy],
+  exports: [PdfFilesService, MongooseModule],
 })
 export class PdfFilesModule {}

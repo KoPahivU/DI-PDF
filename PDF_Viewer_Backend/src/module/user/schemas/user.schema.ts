@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { IsEmpty, IsEnum, IsNotEmpty } from 'class-validator';
+import { IsEnum } from 'class-validator';
 
 @Schema({ timestamps: true })
 export class User {
