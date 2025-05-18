@@ -179,7 +179,6 @@ function SignUp() {
 
         <a
           href={`${process.env.REACT_APP_BE_URI}/auth/google/callback`}
-          target="_blank"
           rel="noopener noreferrer"
           className={cx('google-button')}
         >

@@ -9,11 +9,13 @@ import { LocalStrategy } from '@/auth/passport/local.strategy';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PdfFile, PdfFileSchema } from './schemas/pdf-file.schema';
 import { CloudinaryModule } from '@/common/cloudinary/cloudinary.module';
+import { RecentDocumentModule } from '../recent-document/recent-document.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: PdfFile.name, schema: PdfFileSchema }]),
     forwardRef(() => UserModule),
+    forwardRef(() => RecentDocumentModule),
     CloudinaryModule,
   ],
   controllers: [PdfFilesController, AuthController],

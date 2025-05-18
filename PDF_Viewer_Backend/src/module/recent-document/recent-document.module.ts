@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { RecentDocumentService } from './recent-document.service';
 import { RecentDocumentController } from './recent-document.controller';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -12,8 +12,8 @@ import { LocalStrategy } from '@/auth/passport/local.strategy';
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: RecentDocument.name, schema: RecentDocumentSchema }]),
-    UserModule,
-    PdfFilesModule,
+    forwardRef(() => UserModule),
+    forwardRef(() => PdfFilesModule),
   ],
   controllers: [RecentDocumentController],
   providers: [RecentDocumentService, AuthService, JwtStrategy, LocalStrategy],

@@ -6,6 +6,7 @@ import Cookies from 'js-cookie';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faDownload } from '@fortawesome/free-solid-svg-icons';
+import { useAuth } from '../../layout/DashBoardLayout';
 
 const cx = classNames.bind(styles);
 
@@ -13,35 +14,11 @@ const PdfViewer: React.FC = () => {
   const token = Cookies.get('DITokens');
   const navigate = useNavigate();
   const { id } = useParams();
+  const profile = useAuth();
 
-  const [profile, setProfile] = useState<any>(null);
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [access, setAccess] = useState('');
-
-  const getProfile = async () => {
-    try {
-      const res = await fetch(`${process.env.REACT_APP_BE_URI}/user/profile`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        console.log('Error Response:', errorData);
-        throw new Error(errorData.message || 'Invalid credentials');
-      }
-
-      const responseData = await res.json();
-      // console.log('Response: ', responseData.data);
-      setProfile(responseData.data);
-    } catch (error) {
-      console.error('Post subject error:', error);
-      return;
-    }
-  };
 
   const getPdf = async () => {
     try {
@@ -84,7 +61,7 @@ const PdfViewer: React.FC = () => {
         },
         body: JSON.stringify({
           fileId: id,
-          userId: profile._id,
+          userId: profile?._id,
         }),
       });
 
@@ -105,12 +82,9 @@ const PdfViewer: React.FC = () => {
     }
   };
 
-  
-
   useEffect(() => {
     const fetchData = async () => {
       await getPdf();
-      await getProfile();
       await postRecentDocs();
     };
 

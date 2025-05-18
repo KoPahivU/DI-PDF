@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { AddLinkPermissionDto } from './dto/add-link-permission.dto';
 import { DeleteUserPermissionDto } from './dto/delete-user-permisson.dto';
 import { DeleteLinkPermissionDto } from './dto/delete-link-permisson.dto';
+import { RecentDocument } from '../recent-document/schemas/recent-document.schema';
 
 @Injectable()
 export class PdfFilesService {
@@ -20,6 +21,8 @@ export class PdfFilesService {
     private pdfFileModel: Model<PdfFile>,
     @InjectModel(User.name)
     private readonly userModel: Model<User>,
+    @InjectModel(RecentDocument.name)
+    private readonly recentDocumentModel: Model<RecentDocument>,
     private readonly cloudinaryService: CloudinaryService,
   ) {}
 
@@ -43,7 +46,14 @@ export class PdfFilesService {
       thumbnailUrl: '',
     });
 
+    const newRecent = await this.recentDocumentModel.create({
+      fileId: newPdfFile._id,
+      userId: userId,
+      date: new Date(),
+    });
+
     return {
+      newRecent,
       newPdfFile,
     };
   }

@@ -6,18 +6,17 @@ import { useEffect, useRef, useState } from 'react';
 import Cookies from 'js-cookie';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faRightFromBracket, faUser } from '@fortawesome/free-solid-svg-icons';
+import { useAuth } from '../../layout/DashBoardLayout';
 
 // Khởi tạo cx từ classNames
 const cx = classNames.bind(styles);
 
-interface HeaderProps {
-  token?: string;
-}
-
-function Header({ token }: HeaderProps) {
+function Header() {
+  const token = Cookies.get('DITokens');
+  const profile = useAuth();
+  // console.log('Profile' , profile);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const [profile, setProfile] = useState<any>(null);
 
   const handleLogout = () => {
     Cookies.remove('DITokens');
@@ -27,61 +26,7 @@ function Header({ token }: HeaderProps) {
 
   const [hiddenBox, setHiddenBox] = useState<boolean>(false);
 
-  const getProfile = async () => {
-    try {
-      const res = await fetch(`${process.env.REACT_APP_BE_URI}/user/profile`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        console.log('Error Response:', errorData);
-        throw new Error(errorData.message || 'Invalid credentials');
-      }
-
-      const responseData = await res.json();
-      // console.log('Response: ', responseData.data);
-      setProfile(responseData.data);
-    } catch (error) {
-      console.error('Post subject error:', error);
-      return;
-    }
-  };
-
-  const get = async () => {
-    try {
-      const res = await fetch(`${process.env.REACT_APP_BE_URI}/user/profile`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        console.log('Error Response:', errorData);
-        throw new Error(errorData.message || 'Invalid credentials');
-      }
-
-      const responseData = await res.json();
-      console.log('Response: ', responseData.data);
-      setProfile(responseData.data);
-    } catch (error) {
-      console.error('Post subject error:', error);
-      return;
-    }
-  };
-
   useEffect(() => {
-    const profile = async () => {
-      await getProfile();
-    };
-
-    profile();
-
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setHiddenBox(false);

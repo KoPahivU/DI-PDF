@@ -54,19 +54,20 @@ export class RecentDocumentService {
 
     if (!user) throw new BadRequestException('User not found.');
 
-    const recentDocs = await this.recentDocumentModel.find({ userId: userId }).skip(skip).limit(limit);
-    console.log(recentDocs);
-    let returnData = new Array<Object>();
-    recentDocs.forEach(async (recentDoc) => {
+    const recentDocs = await this.recentDocumentModel.find({ userId }).skip(skip).limit(limit);
+
+    const dataPromises = recentDocs.map(async (recentDoc) => {
       const pdfFile = await this.pdfFileModel.findById(recentDoc.fileId);
-      console.log('pdf: ', pdfFile);
-      // if (pdfFile) pdfDatas.push(pdfFile);
-      returnData.push({
+      return {
         recent: recentDoc,
         pdf: pdfFile,
-      });
+        user,
+      };
     });
-    const total = await this.recentDocumentModel.find({ userId }).countDocuments();
+
+    const returnData = await Promise.all(dataPromises);
+
+    const total = await this.recentDocumentModel.countDocuments({ userId });
 
     return {
       returnData,

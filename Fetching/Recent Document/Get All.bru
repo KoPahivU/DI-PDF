@@ -5,14 +5,14 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/recent-document?page=1&limit=10
+  url: {{baseUrl}}/recent-document?page=1&limit=5
   body: formUrlEncoded
   auth: bearer
 }
 
 params:query {
   page: 1
-  limit: 10
+  limit: 5
 }
 
 auth:bearer {
@@ -20,6 +20,6 @@ auth:bearer {
 }
 
 body:form-urlencoded {
-  fileId: 6826f14e54d36743114f2661
-  userId: 682596f4d62aacf927e424eb
+  ~fileId: 6826f14e54d36743114f2661
+  ~userId: 682596f4d62aacf927e424eb
 }
