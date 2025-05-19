@@ -10,6 +10,6 @@ export class RecentDocument {
   userId: Types.ObjectId;
 
   @Prop()
-  date: Date;
+  date: string;
 }
 export const RecentDocumentSchema = SchemaFactory.createForClass(RecentDocument);

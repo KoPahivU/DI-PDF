@@ -1,0 +1,14 @@
+.success-popup {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #ebffee;
+  border: 2px solid #14ae5c;
+  border-radius: 10px;
+  padding: 12px;
+  max-width: 400px;
+
+  * {
+    color: #024023;
+  }
+}

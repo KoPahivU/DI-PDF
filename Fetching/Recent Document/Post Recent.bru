@@ -1,0 +1,19 @@
+meta {
+  name: Post Recent
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/recent-document
+  body: formUrlEncoded
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImhvYW5nbGUyOTN2dUBnbWFpbC5jb20iLCJzdWIiOiI2ODI1OTZmNGQ2MmFhY2Y5MjdlNDI0ZWIiLCJpYXQiOjE3NDc2MjYwNjUsImV4cCI6MTc1MDIxODA2NX0._rteUSkhjJanM61a8c5OnXEx9izL8IryFh6SFDUt9YE
+}
+
+body:form-urlencoded {
+  fileId: 682ab0d44260ccc2fb1a32e2
+}

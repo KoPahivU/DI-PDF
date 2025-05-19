@@ -20,6 +20,7 @@ import { AddUserPermissionDto } from './dto/add-user-permission.dto';
 import { AddLinkPermissionDto } from './dto/add-link-permission.dto';
 import { DeleteUserPermissionDto } from './dto/delete-user-permisson.dto';
 import { Public } from '@/common/decorator/customize';
+import { IsPublicDto } from './dto/is-public.dto';
 
 @Controller('pdf-files')
 export class PdfFilesController {
@@ -40,9 +41,14 @@ export class PdfFilesController {
   }
 
   @Get(':id')
-  // @Public()
+  @Public()
   async getPdf(@Param('id') id: string, @Request() req, @Query('shared') shared: string) {
     return await this.pdfFilesService.getPdf(id, req?.user?._id, shared);
+  }
+
+  @Patch('public')
+  async setIsPublic(@Body() body: IsPublicDto, @Request() req) {
+    return await this.pdfFilesService.setIsPublic(body, req.user._id)
   }
 
   @Post('add-user-permission')

@@ -8,11 +8,11 @@ import GlobalStyles from './components/GlobalStyles';
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 
 root.render(
-  <React.StrictMode>
-    <GlobalStyles>
-      <App />
-    </GlobalStyles>
-  </React.StrictMode>
+  // <React.StrictMode>
+  <GlobalStyles>
+    <App />
+  </GlobalStyles>,
+  // {/* </React.StrictMode> */}
 );
 
 reportWebVitals();

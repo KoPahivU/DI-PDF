@@ -1,0 +1,32 @@
+.docs-background {
+  width: 100%;
+  min-height: 500px;
+  border-radius: 15px;
+  border: 1px solid rgb(153, 153, 153);
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+}
+
+.no-docs-button {
+  max-width: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 7px;
+  background-color: #fcd965;
+  color: white;
+  border-radius: 10px;
+  margin-right: 10px;
+  cursor: pointer;
+  transition: transform 0.1s ease-in-out, box-shadow 0.2s ease;
+
+  &:active {
+    transform: scale(0.96);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  }
+}

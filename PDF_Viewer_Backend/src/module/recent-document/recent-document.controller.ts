@@ -1,3 +1,4 @@
+import { ObjectId, Types } from 'mongoose';
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Request } from '@nestjs/common';
 import { RecentDocumentService } from './recent-document.service';
 import { CreateRecentDocumentDto } from './dto/create-recent-document.dto';
@@ -9,8 +10,8 @@ export class RecentDocumentController {
   constructor(private readonly recentDocumentService: RecentDocumentService) {}
 
   @Post()
-  create(@Body() createRecentDocumentDto: CreateRecentDocumentDto) {
-    return this.recentDocumentService.create(createRecentDocumentDto);
+  create(@Body() fileId: CreateRecentDocumentDto, @Request() req) {
+    return this.recentDocumentService.create(fileId.fileId, req.user._id);
   }
 
   @Get()

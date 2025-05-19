@@ -14,8 +14,11 @@ import Paper from '@mui/material/Paper';
 import { Typography } from '@mui/material';
 import Cookies from 'js-cookie';
 import useDrivePicker from 'react-google-drive-picker';
-import ReactPaginate from 'react-paginate';
 import { useNavigate } from 'react-router-dom';
+import { UploadSucess } from '../../components/Popup/UploadSucess';
+import { UploadWarning } from '../../components/Popup/UploadWarning';
+import { DocsEmpty } from '../../components/DocsEmpty';
+import { useAuth } from '../../layout/DashBoardLayout';
 
 const cx = classNames.bind(styles);
 
@@ -43,21 +46,16 @@ interface fileData {
   filename: string;
   fileId: string;
   ownerName: string;
+  ownerId: string;
   avatar: string;
   date: string;
   time: string;
 }
 
-// const rows = [
-//   createData({ filename: 'Frozen yoghurt', fileId: '1' }, { name: 'hehe', avatar: '' }, { date: '12', time: '12' }),
-//   createData({ filename: 'Frozen yoghurt', fileId: '2' }, { name: 'hehe', avatar: '' }, { date: '', time: '' }),
-//   createData({ filename: 'Frozen yoghurt', fileId: '3' }, { name: 'hehe', avatar: '' }, { date: '', time: '' }),
-//   createData({ filename: 'Frozen yoghurt', fileId: '4' }, { name: 'hehe', avatar: '' }, { date: '', time: '' }),
-//   createData({ filename: 'Frozen yoghurt', fileId: '5' }, { name: 'hehe', avatar: '' }, { date: '', time: '' }),
-// ];
-
 function DashBoard() {
   const navigate = useNavigate();
+  const profile = useAuth();
+
   const maxSize = 20 * 1024 * 1024;
   const [file, setFile] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,18 +66,24 @@ function DashBoard() {
 
   const [warningPopup, setWarningPopup] = useState(false);
   const [successPopup, setSuccessPopup] = useState(false);
+
+  const [isNoDocs, setIsNoDocs] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [totalDocs, setTotalDocs] = useState(0);
   const [pageCount, setPageCount] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   //   const [showUpload, setShowUpload] = useState(true);
 
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
   const [rows, setRows] = useState<fileData[]>([]);
 
   const token = Cookies.get('DITokens');
 
-  // console.log('Token: ', token);
+  console.log('Token: ', token);
 
   const toggleDropdown = () => {
+    console.log('Toggle');
     setDropdownOpen((prev) => !prev);
   };
 
@@ -215,7 +219,11 @@ function DashBoard() {
       setSuccessPopup(true);
       setTimeout(() => {
         setSuccessPopup(false);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       }, 2000);
+
       console.log('Response: ', responseData.data);
     } catch (error) {
       console.error('Post subject error:', error);
@@ -235,7 +243,8 @@ function DashBoard() {
 
   const getAllDocument = async () => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_BE_URI}/recent-document?page=${currentPage}&limit=5`, {
+      setIsLoading(true);
+      const res = await fetch(`${process.env.REACT_APP_BE_URI}/recent-document?page=${currentPage}&limit=10`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -253,48 +262,62 @@ function DashBoard() {
       setTotalDocs(responseData.data.totalRecords);
       setPageCount(responseData.data.totalPages);
 
+      if (responseData.data.returnData.length === 0) {
+        setIsNoDocs(true);
+      }
+
       const newRows: fileData[] = responseData.data.returnData.map((data: any) => {
-        const updatedDate = new Date(data.recent.date);
+        console.log(data.recent.date);
+        const [time, date] = data.recent.date.split(' ');
 
         return {
           filename: data.pdf.fileName,
           fileId: data.pdf._id,
           ownerName: data.user.fullName,
+          ownerId: data.user._id,
           avatar: data.user.avatar,
-          date: updatedDate.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-          }),
-          time: updatedDate
-            .toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: '2-digit',
-              second: '2-digit',
-              hour12: true,
-            })
-            .replace(/ /g, ''),
+          date,
+          time,
         };
       });
-
-      setRows(newRows);
+      setRows((prev) => [...prev, ...newRows]);
     } catch (error) {
       console.error('Get documents error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  console.log('Rows: ', rows);
+  useEffect(() => {
+    getAllDocument();
+  }, [currentPage]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      await getAllDocument();
-    };
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoading && currentPage < pageCount) {
+          setCurrentPage((prev) => prev + 1);
+        }
+      },
+      {
+        root: null,
+        rootMargin: '0px',
+        threshold: 1.0,
+      },
+    );
 
-    fetchData();
-  }, [currentPage]);
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (loadMoreRef.current) observer.unobserve(loadMoreRef.current);
+    };
+  }, [isLoading, currentPage, pageCount]);
 
   return (
     <div className={cx('wrapper')}>
+      {/* File header */}
       <div className={cx('header')}>
         <div className={cx('left-header')}>
           <h1 className={cx('text-header')}>Recent Document</h1>
@@ -325,139 +348,131 @@ function DashBoard() {
           style={{ display: 'none' }}
         />
       </div>
-      <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 700 }} aria-label="customized table">
-          <TableHead>
-            <TableRow>
-              <StyledTableCell sx={{ width: '50%' }}>File name</StyledTableCell>
-              <StyledTableCell sx={{ width: '30%' }} align="left">
-                Document Owner
-              </StyledTableCell>
-              <StyledTableCell sx={{ width: '20%' }} align="center">
-                Last Updated
-              </StyledTableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.length > 0 ? (
-              rows.map((row) => (
-                <StyledTableRow
-                  key={row.filename}
-                  style={{ cursor: 'pointer', width: '100%' }}
-                  className={cx('item')}
-                  onClick={() => navigate(`/file/${row.fileId}`)}
-                >
-                  <StyledTableCell component="th" scope="row">
-                    {row.filename}
-                  </StyledTableCell>
-                  <StyledTableCell align="left">
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <img
-                        src={row.avatar || 'https://i.pinimg.com/736x/5e/e0/82/5ee082781b8c41406a2a50a0f32d6aa6.jpg'}
-                        alt="avatar"
-                        style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          marginRight: '10px',
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span style={{ fontSize: '1.5rem' }}>{row.ownerName}</span>
-                    </div>
-                  </StyledTableCell>
-                  <StyledTableCell align="left">
-                    <Typography variant="subtitle1" sx={{ fontSize: '1.5rem', lineHeight: 1.2 }}>
-                      {row.date}
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '1.2rem', color: '#757575' }}>
-                      {row.time}
-                    </Typography>
-                  </StyledTableCell>
-                </StyledTableRow>
-              ))
-            ) : (
-              <>
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <StyledTableRow key={index} className={cx('pulse')}>
-                    <StyledTableCell component="th" scope="row">
-                      <div className={cx('skeleton', 'skeletonTextLong')}></div>
-                    </StyledTableCell>
-                    <StyledTableCell align="left">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className={cx('skeletonCircle')} style={{ width: 40, height: 40 }}></div>
-                        <div className={cx('skeleton', 'skeletonTextShort')}></div>
-                      </div>
-                    </StyledTableCell>
-                    <StyledTableCell align="left">
-                      <div className={cx('skeleton', 'skeletonTextShort')}></div>
-                      <div className={cx('skeleton', 'skeletonSmallText')}></div>
-                    </StyledTableCell>
-                  </StyledTableRow>
-                ))}
-              </>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
 
-      {/* {showUpload && <UploadFile setShowUpload={setShowUpload} />} */}
+      {/* Watch file */}
+      {isNoDocs ? (
+        <DocsEmpty toggleDropdown={toggleDropdown} />
+      ) : (
+        <>
+          <TableContainer component={Paper}>
+            <Table sx={{ minWidth: 700 }} aria-label="customized table">
+              <TableHead>
+                <TableRow>
+                  <StyledTableCell sx={{ width: '50%' }}>File name</StyledTableCell>
+                  <StyledTableCell sx={{ width: '30%' }} align="left">
+                    Document Owner
+                  </StyledTableCell>
+                  <StyledTableCell sx={{ width: '20%' }} align="center">
+                    Last Updated
+                  </StyledTableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {!isLoading || rows.length > 0 ? (
+                  rows.map((row) => (
+                    <StyledTableRow
+                      key={row.fileId}
+                      style={{ cursor: 'pointer', width: '100%' }}
+                      className={cx('item')}
+                      onClick={() => navigate(`/file/${row.fileId}`)}
+                    >
+                      <StyledTableCell component="th" scope="row">
+                        {row.filename}
+                      </StyledTableCell>
+                      <StyledTableCell align="left">
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <img
+                            src={
+                              row?.avatar !== ''
+                                ? row?.avatar
+                                : 'https://i.pinimg.com/736x/5e/e0/82/5ee082781b8c41406a2a50a0f32d6aa6.jpg'
+                            }
+                            alt="avatar"
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '50%',
+                              objectFit: 'cover',
+                              marginRight: '10px',
+                              flexShrink: 0,
+                            }}
+                          />
+                          <span style={{ fontSize: '1.5rem' }}>
+                            {row.ownerName} {row.ownerId === profile?._id && '(You)'}
+                          </span>
+                        </div>
+                      </StyledTableCell>
+                      <StyledTableCell align="left">
+                        <Typography variant="subtitle1" sx={{ fontSize: '1.5rem', lineHeight: 1.2 }}>
+                          {row.date}
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontSize: '1.2rem', color: '#757575' }}>
+                          {row.time}
+                        </Typography>
+                      </StyledTableCell>
+                    </StyledTableRow>
+                  ))
+                ) : (
+                  <>
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <StyledTableRow key={index} className={cx('pulse')}>
+                        <StyledTableCell component="th" scope="row">
+                          <div className={cx('skeleton', 'skeletonTextLong')}></div>
+                        </StyledTableCell>
+                        <StyledTableCell align="left">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div className={cx('skeletonCircle')} style={{ width: 40, height: 40 }}></div>
+                            <div className={cx('skeleton', 'skeletonTextShort')}></div>
+                          </div>
+                        </StyledTableCell>
+                        <StyledTableCell align="left">
+                          <div className={cx('skeleton', 'skeletonTextShort')}></div>
+                          <div className={cx('skeleton', 'skeletonSmallText')}></div>
+                        </StyledTableCell>
+                      </StyledTableRow>
+                    ))}
+                  </>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
-      {warningPopup && (
-        <div className={cx('error-popup')}>
-          <div style={{ display: 'flex', gap: '5px' }}>
-            <FontAwesomeIcon style={{ width: '25px', height: '25px' }} icon={faTriangleExclamation} />
-            <div>
-              <h4>Cannot upload this file</h4>
-              <span style={{ maxWidth: '400px', fontSize: '1.3rem' }}>
-                Please ensure the upload file is not more than 20MB and in .pdf format
-              </span>
-            </div>
-            <FontAwesomeIcon
-              style={{ width: '18px', height: '18px', alignSelf: 'center', cursor: 'pointer' }}
-              icon={faXmark}
-              onClick={() => setWarningPopup(false)}
-            />
-          </div>
-        </div>
+          {/* Load more trigger */}
+          <div ref={loadMoreRef} style={{ height: '20px', marginTop: '10px' }}></div>
+
+          {/* <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', gap: '10px' }}>
+            <button
+              onClick={() => {
+                setRows([]);
+                setCurrentPage((prev) => Math.max(prev - 1, 1));
+              }}
+              disabled={currentPage === 1}
+              style={{ padding: '8px 12px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+            >
+              Previous
+            </button>
+
+            <span style={{ lineHeight: '32px' }}>
+              Page {currentPage} / {pageCount}
+            </span>
+
+            <button
+              onClick={() => {
+                setRows([]);
+                setCurrentPage((prev) => Math.min(prev + 1, pageCount));
+              }}
+              disabled={currentPage === pageCount}
+              style={{ padding: '8px 12px', cursor: currentPage === pageCount ? 'not-allowed' : 'pointer' }}
+            >
+              Next
+            </button>
+          </div> */}
+        </>
       )}
 
-      {successPopup && (
-        <div className={cx('success-popup')}>
-          <div style={{ display: 'flex', gap: '5px' }}>
-            <FontAwesomeIcon style={{ width: '25px', height: '25px' }} icon={faCheckToSlot} />
-            <h4>Uploaded successfully</h4>
-            <FontAwesomeIcon
-              style={{ width: '18px', height: '18px', alignSelf: 'center', cursor: 'pointer', marginLeft: '20px' }}
-              icon={faXmark}
-              onClick={() => setSuccessPopup(false)}
-            />
-          </div>
-        </div>
-      )}
+      {warningPopup && <UploadWarning setWarningPopup={setWarningPopup} />}
 
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', gap: '10px' }}>
-        <button
-          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-          disabled={currentPage === 1}
-          style={{ padding: '8px 12px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
-        >
-          Previous
-        </button>
-
-        <span style={{ lineHeight: '32px' }}>
-          Page {currentPage} / {pageCount}
-        </span>
-
-        <button
-          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, pageCount))}
-          disabled={currentPage === pageCount}
-          style={{ padding: '8px 12px', cursor: currentPage === pageCount ? 'not-allowed' : 'pointer' }}
-        >
-          Next
-        </button>
-      </div>
+      {successPopup && <UploadSucess setSuccessPopup={setSuccessPopup} />}
     </div>
   );
 }

@@ -37,3 +37,4 @@ export class User {
   usedStorage: number;
 }
 export const UserSchema = SchemaFactory.createForClass(User);
+UserSchema.index({ gmail: 'text', fullName: 'text' });

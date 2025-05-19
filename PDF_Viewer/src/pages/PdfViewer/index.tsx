@@ -3,27 +3,45 @@ import { Document, Page } from 'react-pdf';
 import styles from './PdfViewer.module.scss';
 import classNames from 'classnames/bind';
 import Cookies from 'js-cookie';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faDownload } from '@fortawesome/free-solid-svg-icons';
-import { useAuth } from '../../layout/DashBoardLayout';
+import { faArrowLeft, faArrowUpFromBracket, faDownload } from '@fortawesome/free-solid-svg-icons';
+import { PermissionBox } from '../../components/PermissionBox';
 
 const cx = classNames.bind(styles);
+
+export interface sharedLink {
+  access: string;
+  token: string;
+  _id: string;
+}
+
+export interface PdfData {
+  _id: string;
+  url: string;
+  access: string;
+  fileName: string;
+  sharedLink: sharedLink[];
+  sharedWith: Object[];
+  isPublic: boolean;
+}
 
 const PdfViewer: React.FC = () => {
   const token = Cookies.get('DITokens');
   const navigate = useNavigate();
   const { id } = useParams();
-  const profile = useAuth();
+  const [searchParams] = useSearchParams();
+  const shared = searchParams.get('shared');
 
-  const [pdfData, setPdfData] = useState<string | null>(null);
+  const [permissionPopup, setPermissionPopup] = useState(false);
+
+  const [pdfData, setPdfData] = useState<PdfData | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
-  const [access, setAccess] = useState('');
 
   const getPdf = async () => {
     try {
       // console.log('URL: ', `${process.env.REACT_APP_BE_URI}/pdf-files/${id}`);
-      const res = await fetch(`${process.env.REACT_APP_BE_URI}/pdf-files/${id}`, {
+      const res = await fetch(`${process.env.REACT_APP_BE_URI}/pdf-files/${id}?shared=${shared}`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -42,9 +60,15 @@ const PdfViewer: React.FC = () => {
 
       const responseData = await res.json();
       console.log('Response: ', responseData.data);
-      setPdfData(responseData.data.file.storagePath);
-      setAccess(responseData.data.access);
-      console.log(access);
+      setPdfData({
+        _id: responseData.data.file._id,
+        url: responseData.data.file.storagePath,
+        access: responseData.data.access,
+        fileName: responseData.data.file.fileName,
+        sharedLink: responseData.data.file.sharedLink,
+        sharedWith: responseData.data.file.sharedWith,
+        isPublic: responseData.data.file.isPublic,
+      });
     } catch (error) {
       console.error('getPdf error:', error);
       return;
@@ -61,7 +85,6 @@ const PdfViewer: React.FC = () => {
         },
         body: JSON.stringify({
           fileId: id,
-          userId: profile?._id,
         }),
       });
 
@@ -72,10 +95,12 @@ const PdfViewer: React.FC = () => {
       }
 
       const responseData = await res.json();
-      console.log('Response: ', responseData.data);
-      setPdfData(responseData.data.file.storagePath);
-      setAccess(responseData.data.access);
-      console.log(access);
+      console.log('Response postRecentDocs: ', responseData);
+      // setPdfData({
+      //   url: responseData.data.file.storagePath,
+      //   access: responseData.data.access,
+      //   fileName: responseData.data.file.fileName,
+      // });
     } catch (error) {
       console.error('postRecentDocs error:', error);
       return;
@@ -98,7 +123,7 @@ const PdfViewer: React.FC = () => {
   const toggleDownload = async () => {
     try {
       if (pdfData) {
-        const response = await fetch(pdfData);
+        const response = await fetch(pdfData.url);
         const blob = await response.blob();
 
         const url = URL.createObjectURL(blob);
@@ -115,8 +140,6 @@ const PdfViewer: React.FC = () => {
     }
   };
 
-  console.log('pdfData', pdfData);
-
   return (
     <div className={cx('wrapper')}>
       <div className={cx('header')}>
@@ -126,9 +149,15 @@ const PdfViewer: React.FC = () => {
           onClick={() => navigate(-1)}
         />
 
-        <div className={cx('right-header')} onClick={toggleDownload}>
-          <FontAwesomeIcon style={{ marginRight: '10px' }} icon={faDownload} />
-          Download
+        <div className={cx('right-header')}>
+          <div className={cx('button')} onClick={toggleDownload}>
+            <FontAwesomeIcon style={{ marginRight: '10px' }} icon={faDownload} />
+            Download
+          </div>
+          <div className={cx('button')} onClick={() => setPermissionPopup(true)}>
+            <FontAwesomeIcon style={{ marginRight: '10px' }} icon={faArrowUpFromBracket} />
+            Share
+          </div>
         </div>
       </div>
       <div className={cx('pdf-section')}>
@@ -149,22 +178,11 @@ const PdfViewer: React.FC = () => {
           <p>Đang tải PDF...</p>
         )}
       </div>
+      {permissionPopup && (
+        <PermissionBox access={pdfData?.access} setPermissionPopup={setPermissionPopup} pdfData={pdfData} />
+      )}{' '}
     </div>
   );
-
-  // return (
-  //   <div className="p-4">
-  //     {pdfData ? (
-  //       <Document file={ pdfData } onLoadSuccess={onDocumentLoadSuccess}>
-  //         {Array.from(new Array(numPages), (_, index) => (
-  //           <Page key={index} pageNumber={index + 1} />
-  //         ))}
-  //       </Document>
-  //     ) : (
-  //       <p>Đang tải PDF...</p>
-  //     )}
-  //   </div>
-  // );
 };
 
 export default PdfViewer;

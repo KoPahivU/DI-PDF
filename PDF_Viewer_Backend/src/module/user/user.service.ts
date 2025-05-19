@@ -68,17 +68,24 @@ export class UserService {
 
     const excludedUserIds = [file.ownerId, ...file.sharedWith.map((u) => u.userId)];
 
+    const filter = {
+      $and: [{ _id: { $nin: excludedUserIds } }, { $text: { $search: search.searchInput } }],
+    };
+
+    const regex = new RegExp(search.searchInput, 'i');
+
     const user = await this.userModel
       .find({
-        $and: [{ _id: { $ne: excludedUserIds } }, { gmail: search.searchInput }],
+        _id: { $nin: excludedUserIds },
+        $or: [{ gmail: regex }, { fullName: regex }],
       })
       .skip(skip)
       .limit(limit);
-    const total = await this.userModel
-      .find({
-        $and: [{ _id: { $ne: excludedUserIds } }, { gmail: search.searchInput }],
-      })
-      .countDocuments();
+
+    const total = await this.userModel.countDocuments({
+      _id: { $nin: excludedUserIds },
+      $or: [{ gmail: regex }, { fullName: regex }],
+    });
 
     return {
       user,

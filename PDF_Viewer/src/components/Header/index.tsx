@@ -14,7 +14,6 @@ const cx = classNames.bind(styles);
 function Header() {
   const token = Cookies.get('DITokens');
   const profile = useAuth();
-  // console.log('Profile' , profile);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 

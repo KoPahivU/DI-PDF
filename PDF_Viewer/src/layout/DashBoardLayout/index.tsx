@@ -39,6 +39,7 @@ const DashBoardLayout: React.FC<DashBoardLayoutProps> = ({ children }) => {
       if (!res.ok) {
         const errorData = await res.json();
         console.log('Error Response:', errorData);
+        Cookies.remove('DITokens');
         throw new Error(errorData.message || 'Invalid credentials');
       }
 

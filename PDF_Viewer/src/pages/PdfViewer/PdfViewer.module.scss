@@ -27,10 +27,15 @@
 
 .right-header {
   margin-right: 25px;
-  cursor: pointer;
+  display: flex;
+  gap: 10px;
+}
+
+.button {
   padding: 7px;
+  cursor: pointer;
   border-radius: 10px;
-  border: 1px solid white;
+  border: 1px solid rgb(236, 236, 236);
 
   &:hover {
     border: 1px solid black;

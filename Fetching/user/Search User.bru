@@ -1,0 +1,25 @@
+meta {
+  name: Search User
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/user/search-user?page=1&limit=5
+  body: formUrlEncoded
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  limit: 5
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImhvYW5nbGUyOTN2dUBnbWFpbC5jb20iLCJzdWIiOiI2ODI1OTZmNGQ2MmFhY2Y5MjdlNDI0ZWIiLCJpYXQiOjE3NDc2MjYwNjUsImV4cCI6MTc1MDIxODA2NX0._rteUSkhjJanM61a8c5OnXEx9izL8IryFh6SFDUt9YE
+}
+
+body:form-urlencoded {
+  fileId: 682ace3585f1f010e2925ee8
+  searchInput: 225
+}

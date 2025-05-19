@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreatePdfFileDto } from './dto/create-pdf-file.dto.dto';
 import { UpdatePdfFileDto } from './dto/update-pdf-file.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { PdfFile, SharedUser } from './schemas/pdf-file.schema';
+import { AccessLevel, PdfFile, SharedUser } from './schemas/pdf-file.schema';
 import { Model, ObjectId, Types } from 'mongoose';
 import { User } from '../user/schemas/user.schema';
 import { CloudinaryService } from '@/common/cloudinary/cloudinary.service';
@@ -13,6 +13,7 @@ import { AddLinkPermissionDto } from './dto/add-link-permission.dto';
 import { DeleteUserPermissionDto } from './dto/delete-user-permisson.dto';
 import { DeleteLinkPermissionDto } from './dto/delete-link-permisson.dto';
 import { RecentDocument } from '../recent-document/schemas/recent-document.schema';
+import { IsPublicDto } from './dto/is-public.dto';
 
 @Injectable()
 export class PdfFilesService {
@@ -49,7 +50,7 @@ export class PdfFilesService {
     const newRecent = await this.recentDocumentModel.create({
       fileId: newPdfFile._id,
       userId: userId,
-      date: new Date(),
+      date: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
     });
 
     return {
@@ -58,7 +59,8 @@ export class PdfFilesService {
     };
   }
 
-  async getPdf(fileId: string, userId: Types.ObjectId | string, shared: string | null) {
+  async getPdf(fileId: Types.ObjectId | string, userId: Types.ObjectId | string, shared: string | null) {
+    // const fileObjectId = new Types.ObjectId(fileId);
     const file = await this.pdfFileModel.findById(fileId);
 
     if (!file) throw new BadRequestException('File id not found');
@@ -73,7 +75,9 @@ export class PdfFilesService {
       const sharedItem = file.sharedLink.find((link) => link.token === shared);
 
       if (sharedItem) {
-        const sharedUser = file.sharedWith.find((user) => user.userId === userObjectId);
+        const sharedUser = file.sharedWith.find((user) => {
+          return user.userId.equals(userObjectId);
+        });
         if (sharedUser) {
           sharedUser.access = sharedItem.access;
         } else {
@@ -96,6 +100,45 @@ export class PdfFilesService {
       file,
       access: isOwner ? 'Owner' : 'Guest',
     };
+  }
+
+  async setIsPublic(body: IsPublicDto, userId: Types.ObjectId | string) {
+    const file = await this.pdfFileModel.findById(body.fileId);
+    if (!file) throw new BadRequestException('File id not found');
+
+    // console.log(file.ownerId, "   ", userId)
+
+    const isOwner = file.ownerId === userId;
+    if (!isOwner) throw new BadRequestException('You have no permission');
+
+    file.isPublic = body.isPublic;
+
+    if (file.isPublic) {
+      const editToken = uuidv4();
+
+      file.sharedLink.push({
+        access: AccessLevel.EDIT,
+        token: editToken,
+      });
+
+      let viewToken;
+
+      do {
+        viewToken = uuidv4();
+      } while (viewToken === editToken);
+
+      file.sharedLink.push({
+        access: AccessLevel.VIEW,
+        token: viewToken,
+      });
+    } else {
+      file.sharedLink = [];
+      file.sharedWith = [];
+    }
+    
+    await file.save();
+
+    return file;
   }
 
   async handleCheckUserPermission(userId: string | Types.ObjectId, userPermission: AddUserPermissionDto) {

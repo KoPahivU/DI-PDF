@@ -4,7 +4,4 @@ import { Types } from 'mongoose';
 export class CreateRecentDocumentDto {
   @IsNotEmpty()
   fileId: Types.ObjectId;
-
-  @IsNotEmpty()
-  userId: Types.ObjectId;
 }

@@ -4,7 +4,7 @@ import { CreateRecentDocumentDto } from './dto/create-recent-document.dto';
 import { UpdateRecentDocumentDto } from './dto/update-recent-document.dto';
 import { User } from '../user/schemas/user.schema';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, ObjectId, Types } from 'mongoose';
+import mongoose, { Model, ObjectId, Types } from 'mongoose';
 import { RecentDocument } from './schemas/recent-document.schema';
 import { PdfFilesService } from '../pdf-files/pdf-files.service';
 import { PaginationDto } from '@/common/dto/pagination.dto';
@@ -21,25 +21,30 @@ export class RecentDocumentService {
     private readonly pdfService: PdfFilesService,
   ) {}
 
-  async create(createRecentDocumentDto: CreateRecentDocumentDto) {
+  async create(fileId: Types.ObjectId | string, userId: Types.ObjectId) {
+    const fiLeIdObject = new mongoose.Types.ObjectId(fileId);
     const recentDoc = await this.recentDocumentModel.findOne({
-      fileId: createRecentDocumentDto.fileId,
-      userId: createRecentDocumentDto.userId,
+      fileId: fiLeIdObject,
+      userId,
     });
 
     try {
-      await this.pdfService.getPdf(createRecentDocumentDto.fileId.toString(), createRecentDocumentDto.userId, null);
+      await this.pdfService.getPdf(fiLeIdObject, userId, null);
     } catch {
       throw new BadRequestException('You have no permission');
     }
-
+    const newDate = new Date();
+    console.log('newDate ISO:', newDate.toISOString());
+    console.log('newDate Local:', newDate.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }));
     if (recentDoc) {
-      recentDoc.date = new Date();
+      recentDoc.date = newDate.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+      await recentDoc.save();
+      return recentDoc;
     } else {
       const newRecent = await this.recentDocumentModel.create({
-        fileId: createRecentDocumentDto.fileId,
-        userId: createRecentDocumentDto.userId,
-        date: new Date(),
+        fileId,
+        userId,
+        date: newDate.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
       });
 
       return newRecent;
@@ -54,10 +59,11 @@ export class RecentDocumentService {
 
     if (!user) throw new BadRequestException('User not found.');
 
-    const recentDocs = await this.recentDocumentModel.find({ userId }).skip(skip).limit(limit);
+    const recentDocs = await this.recentDocumentModel.find({ userId }).skip(skip).limit(limit).sort({ date: -1 });
 
     const dataPromises = recentDocs.map(async (recentDoc) => {
       const pdfFile = await this.pdfFileModel.findById(recentDoc.fileId);
+      const user = await this.userModel.findById(pdfFile?.ownerId);
       return {
         recent: recentDoc,
         pdf: pdfFile,
