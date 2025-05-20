@@ -13,3 +13,5 @@ export class RecentDocument {
   date: string;
 }
 export const RecentDocumentSchema = SchemaFactory.createForClass(RecentDocument);
+
+RecentDocumentSchema.index({ fileId: 1, userId: 1 }, { unique: true });

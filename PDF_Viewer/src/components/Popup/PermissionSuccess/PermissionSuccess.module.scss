@@ -1,14 +1,14 @@
-.error-popup {
+.success-popup {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  background-color: #fee9e7;
-  border: 1.5px solid #d05463;
+  background-color: #ebffee;
+  border: 2px solid #14ae5c;
   border-radius: 10px;
   padding: 12px;
   max-width: 400px;
 
   * {
-    color: #900b09;
+    color: #024023;
   }
 }

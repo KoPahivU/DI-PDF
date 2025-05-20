@@ -62,7 +62,7 @@ const DashBoardLayout: React.FC<DashBoardLayoutProps> = ({ children }) => {
 
   useEffect(() => {
     const profile = async () => {
-      await getProfile();
+      if (token) await getProfile();
     };
 
     profile();

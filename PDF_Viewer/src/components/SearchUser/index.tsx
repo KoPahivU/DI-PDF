@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import styles from './SearchUser.module.scss';
 import classNames from 'classnames/bind';
 import Cookies from 'js-cookie';
+import { SharedUser } from '../../pages/PdfViewer';
 
 const cx = classNames.bind(styles);
 
@@ -12,17 +13,29 @@ interface User {
   gmail: string;
 }
 
-export function SearchUser({ fileId }: { fileId: string | undefined }) {
-  console.log('File: ', fileId);
+export function SearchUser({
+  fileId,
+  sharedUser,
+  setSharedUser,
+}: {
+  fileId: string | undefined;
+  sharedUser: SharedUser[] | undefined;
+  setSharedUser: Function;
+}) {
+  // console.log('File: ', fileId);
   const token = Cookies.get('DITokens');
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [userData, setUserData] = useState<User[]>([]);
+  console.log('Search data: ', userData);
   const [showDropdown, setShowDropdown] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  console.log(sharedUser);
+  console.log(userData);
 
   useEffect(() => {
     if (searchTerm === '') {
@@ -67,10 +80,9 @@ export function SearchUser({ fileId }: { fileId: string | undefined }) {
       }
 
       const responseData = await res.json();
-      console.log('Response search: ', responseData.data);
+      // console.log('Response search: ', responseData.data);
       if (responseData.data.user.length > 0) {
         const newUser: User[] = responseData.data.user.map((data: any) => {
-          console.log(data.avatar);
           return {
             _id: data._id,
             avatar:
@@ -81,7 +93,9 @@ export function SearchUser({ fileId }: { fileId: string | undefined }) {
             gmail: data.gmail,
           };
         });
-        setUserData(newUser);
+        // Lọc User
+        const filteredUser = newUser.filter((user) => !sharedUser?.some((shared) => shared.userId === user._id));
+        setUserData(filteredUser);
         setShowDropdown(true);
       }
     } catch (error) {
@@ -105,7 +119,24 @@ export function SearchUser({ fileId }: { fileId: string | undefined }) {
       {showDropdown && userData.length > 0 && (
         <ul className={cx('dropdown')}>
           {userData.map((user) => (
-            <li key={user._id} className={cx('dropdownItem')}>
+            <li
+              key={user._id}
+              className={cx('dropdownItem')}
+              onClick={() => {
+                setSharedUser((prev: SharedUser[]) => [
+                  ...prev,
+                  {
+                    _id: '',
+                    userId: user._id,
+                    access: 'View',
+                  },
+                ]);
+                setShowDropdown(false);
+                if (inputRef.current) {
+                  inputRef.current.value = '';
+                }
+              }}
+            >
               <img src={user.avatar} alt="avatar" className={cx('avatar')} />
               <div className={cx('info')}>
                 <strong style={{ fontSize: '1.6rem' }}>{user.fullName || 'No Name'}</strong>

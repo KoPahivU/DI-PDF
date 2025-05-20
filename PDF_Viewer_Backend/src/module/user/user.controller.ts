@@ -25,6 +25,11 @@ export class UserController {
     return await this.userService.getProfile(req.user._id);
   }
 
+  @Get('user-information/:id')
+  async getUserInformation(@Param() id: string) {
+    return await this.userService.getUserInformation(id);
+  }
+
   @Post('search-user')
   async searchUser(@Body() search: SearchFileDto, @Query() paginationDto: PaginationDto) {
     return await this.userService.searchUser(search, paginationDto);

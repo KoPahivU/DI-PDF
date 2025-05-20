@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import styles from './DashBoard.module.scss';
 import classNames from 'classnames/bind';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowUpFromBracket, faCheckToSlot, faTriangleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faArrowUpFromBracket } from '@fortawesome/free-solid-svg-icons';
 import { styled } from '@mui/material/styles';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -19,6 +19,8 @@ import { UploadSucess } from '../../components/Popup/UploadSucess';
 import { UploadWarning } from '../../components/Popup/UploadWarning';
 import { DocsEmpty } from '../../components/DocsEmpty';
 import { useAuth } from '../../layout/DashBoardLayout';
+import { GuestDashboard } from '../../components/GuestDashboard';
+import { UploadProcess } from '../../components/Popup/UploadProcess';
 
 const cx = classNames.bind(styles);
 
@@ -65,6 +67,9 @@ function DashBoard() {
   const [openPicker, authResponse] = useDrivePicker();
 
   const [warningPopup, setWarningPopup] = useState(false);
+  const [warning, setWarning] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   const [successPopup, setSuccessPopup] = useState(false);
 
   const [isNoDocs, setIsNoDocs] = useState(false);
@@ -125,7 +130,13 @@ function DashBoard() {
               });
 
               if (!response.ok) {
-                throw new Error('Failed to download file from Google Drive');
+                setWarningPopup(true);
+                setWarning('Please ensure the upload file is not more than 20MB and in .pdf format.');
+                setTimeout(() => {
+                  setWarningPopup(false);
+                }, 2000);
+                setFile(null);
+                return;
               }
 
               const blob = await response.blob();
@@ -140,6 +151,7 @@ function DashBoard() {
               setFile(null);
             }
           } else {
+            setWarning('Please ensure the upload file is not more than 20MB and in .pdf format.');
             setWarningPopup(true);
             setTimeout(() => {
               setWarningPopup(false);
@@ -175,10 +187,12 @@ function DashBoard() {
   }, [dropdownOpen]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('File change');
     const selectedFile = e.target.files?.[0];
 
     if (selectedFile) {
       if (selectedFile?.size > maxSize) {
+        setWarning('Please ensure the upload file is not more than 20MB and in .pdf format.');
         setWarningPopup(true);
         setTimeout(() => {
           setWarningPopup(false);
@@ -191,44 +205,96 @@ function DashBoard() {
     }
   };
 
+  // const uploadFile = async () => {
+  //   try {
+  //     if (!file) {
+  //       return;
+  //     }
+  //     const body = new FormData();
+  //     body.append('file', file);
+  //     body.append('fileName', file?.name);
+  //     body.append('fileSize', file?.size.toString());
+
+  //     const res = await fetch(`${process.env.REACT_APP_BE_URI}/pdf-files/upload`, {
+  //       method: 'POST',
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //       body: body,
+  //     });
+
+  //     if (!res.ok) {
+  //       const errorData = await res.json();
+  //       console.log('Error Response:', errorData);
+  //       throw new Error(errorData.message || 'Invalid credentials');
+  //     }
+
+  //     const responseData = await res.json();
+  //     setSuccessPopup(true);
+  //     setTimeout(() => {
+  //       setSuccessPopup(false);
+  //       setTimeout(() => {
+  //         window.location.reload();
+  //       }, 1000);
+  //     }, 2000);
+
+  //     console.log('Response: ', responseData.data);
+  //   } catch (error) {
+  //     console.error('Post subject error:', error);
+  //     return;
+  //   }
+  // };
+
   const uploadFile = async () => {
-    try {
-      if (!file) {
-        return;
+    if (!file) return;
+
+    const body = new FormData();
+    body.append('file', file);
+    body.append('fileName', file.name);
+    body.append('fileSize', file.size.toString());
+
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.round((event.loaded / event.total) * 100);
+        if (percent > 90) {
+          setUploadProgress(90);
+        } else setUploadProgress(percent);
+        setIsUploading(true);
       }
-      const body = new FormData();
-      body.append('file', file);
-      body.append('fileName', file?.name);
-      body.append('fileSize', file?.size.toString());
+    });
 
-      const res = await fetch(`${process.env.REACT_APP_BE_URI}/pdf-files/upload`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: body,
-      });
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState === XMLHttpRequest.DONE) {
+        setIsUploading(false);
+        if (xhr.status === 200 || xhr.status === 201) {
+          setSuccessPopup(true);
+          setTimeout(() => {
+            setSuccessPopup(false);
+            window.location.reload();
+          }, 1000);
+          setFile(null);
+          setUploadProgress(0);
+        } else {
+          console.error('Upload failed:', xhr.responseText);
+          const response = JSON.parse(xhr.responseText);
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        console.log('Error Response:', errorData);
-        throw new Error(errorData.message || 'Invalid credentials');
+          if (response.message === 'Out of memory!') {
+            setWarning('You have used up all 1GB of space.');
+            setWarningPopup(true);
+            setTimeout(() => {
+              setWarningPopup(false);
+            }, 2000);
+            setFile(null);
+          }
+        }
       }
+    };
 
-      const responseData = await res.json();
-      setSuccessPopup(true);
-      setTimeout(() => {
-        setSuccessPopup(false);
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      }, 2000);
-
-      console.log('Response: ', responseData.data);
-    } catch (error) {
-      console.error('Post subject error:', error);
-      return;
-    }
+    xhr.open('POST', `${process.env.REACT_APP_BE_URI}/pdf-files/upload`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.send(body);
   };
 
   useEffect(() => {
@@ -267,7 +333,6 @@ function DashBoard() {
       }
 
       const newRows: fileData[] = responseData.data.returnData.map((data: any) => {
-        console.log(data.recent.date);
         const [time, date] = data.recent.date.split(' ');
 
         return {
@@ -315,7 +380,7 @@ function DashBoard() {
     };
   }, [isLoading, currentPage, pageCount]);
 
-  return (
+  return token ? (
     <div className={cx('wrapper')}>
       {/* File header */}
       <div className={cx('header')}>
@@ -439,41 +504,15 @@ function DashBoard() {
 
           {/* Load more trigger */}
           <div ref={loadMoreRef} style={{ height: '20px', marginTop: '10px' }}></div>
-
-          {/* <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', gap: '10px' }}>
-            <button
-              onClick={() => {
-                setRows([]);
-                setCurrentPage((prev) => Math.max(prev - 1, 1));
-              }}
-              disabled={currentPage === 1}
-              style={{ padding: '8px 12px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
-            >
-              Previous
-            </button>
-
-            <span style={{ lineHeight: '32px' }}>
-              Page {currentPage} / {pageCount}
-            </span>
-
-            <button
-              onClick={() => {
-                setRows([]);
-                setCurrentPage((prev) => Math.min(prev + 1, pageCount));
-              }}
-              disabled={currentPage === pageCount}
-              style={{ padding: '8px 12px', cursor: currentPage === pageCount ? 'not-allowed' : 'pointer' }}
-            >
-              Next
-            </button>
-          </div> */}
         </>
       )}
 
-      {warningPopup && <UploadWarning setWarningPopup={setWarningPopup} />}
-
+      {warningPopup && <UploadWarning setWarningPopup={setWarningPopup} text={warning} />}
       {successPopup && <UploadSucess setSuccessPopup={setSuccessPopup} />}
+      {isUploading && <UploadProcess uploadProgress={uploadProgress} />}
     </div>
+  ) : (
+    <GuestDashboard />
   );
 }
 

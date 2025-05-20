@@ -3,5 +3,5 @@ import { Types } from 'mongoose';
 
 export class CreateRecentDocumentDto {
   @IsNotEmpty()
-  fileId: Types.ObjectId;
+  fileId: string;
 }

@@ -1,8 +1,8 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import styles from './DocsEmpty.module.scss';
-import classNames from 'classnames/bind';
 import img_empty from '~/assets/svg/img_empty_in_progress_pic.svg';
 import { faArrowUpFromBracket } from '@fortawesome/free-solid-svg-icons';
+import classNames from 'classnames/bind';
+import styles from './DocsEmpty.module.scss';
 
 const cx = classNames.bind(styles);
 

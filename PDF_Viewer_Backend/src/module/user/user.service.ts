@@ -52,11 +52,26 @@ export class UserService {
   }
 
   async getProfile(userId: string | Types.ObjectId) {
-    const user = this.userModel.findById(userId);
+    const user = await this.userModel.findById(userId);
 
     if (!user) throw new BadRequestException('User not found.');
 
     return user;
+  }
+
+  async getUserInformation(userId: string) {
+    const objectId = new Types.ObjectId(userId);
+
+    const user = await this.userModel.findById(objectId);
+
+    if (!user) throw new BadRequestException('User not found.');
+
+    return {
+      _id: user._id,
+      gmail: user.gmail,
+      fullName: user.fullName,
+      avatar: user.avatar,
+    };
   }
 
   async searchUser(search: SearchFileDto, paginationDto: PaginationDto) {

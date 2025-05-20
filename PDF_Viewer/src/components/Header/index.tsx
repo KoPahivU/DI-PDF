@@ -58,7 +58,7 @@ function Header() {
           <img
             className={cx('avatar')}
             src={
-              profile?.avatar !== undefined && profile?.avatar === ''
+              profile?.avatar && profile.avatar.trim() !== ''
                 ? profile.avatar
                 : 'https://i.pinimg.com/736x/5e/e0/82/5ee082781b8c41406a2a50a0f32d6aa6.jpg'
             }

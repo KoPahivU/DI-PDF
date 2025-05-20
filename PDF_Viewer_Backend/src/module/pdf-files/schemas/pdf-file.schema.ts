@@ -4,7 +4,8 @@ import { Types, Schema as MongooseSchema } from 'mongoose';
 export enum AccessLevel {
   VIEW = 'View',
   EDIT = 'Edit',
-  GUEST = 'Guest'
+  GUEST = 'Guest',
+  REMOVE = 'Remove',
 }
 
 @Schema()

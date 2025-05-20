@@ -1,20 +1,52 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './AdminItem.module.scss';
 import classNames from 'classnames/bind';
 import { useAuth } from '../../layout/DashBoardLayout';
+import Cookies from 'js-cookie';
+import { UserItemInterface } from '../UserItem';
 
 const cx = classNames.bind(styles);
 
-export interface UserItemInterface {
-  userId: string;
-  fullName: string;
-  gmail: string;
-  avatar: string;
-  access: string;
-}
-
-export function AdminItem({ userData }: { userData: UserItemInterface | null }) {
+export function AdminItem({ ownerId }: { ownerId: string | undefined }) {
   const profile = useAuth();
+  const token = Cookies.get('DITokens');
+  const [userData, setUserData] = useState<UserItemInterface | null>(null);
+
+  useEffect(() => {
+    if (ownerId) {
+      getInformation();
+    }
+  }, [ownerId]);
+
+  const getInformation = async () => {
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BE_URI}/user/user-information/${ownerId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.log('Error Response:', errorData);
+        throw new Error(errorData.message || 'Invalid credentials');
+      }
+
+      const responseData = await res.json();
+      console.log('Response getInformation: ', responseData.data);
+      setUserData({
+        userId: responseData.data._id,
+        fullName: responseData.data.fullName,
+        gmail: responseData.data.gmail,
+        avatar: responseData.data.avatar,
+        access: 'Owner',
+      });
+    } catch (error) {
+      console.error('patchPublic error:', error);
+      return;
+    }
+  };
 
   return (
     <div style={{ height: '45px', display: 'flex', gap: '7px' }}>

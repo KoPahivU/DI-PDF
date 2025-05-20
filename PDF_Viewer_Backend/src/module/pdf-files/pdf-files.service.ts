@@ -14,6 +14,8 @@ import { DeleteUserPermissionDto } from './dto/delete-user-permisson.dto';
 import { DeleteLinkPermissionDto } from './dto/delete-link-permisson.dto';
 import { RecentDocument } from '../recent-document/schemas/recent-document.schema';
 import { IsPublicDto } from './dto/is-public.dto';
+import { gmail } from 'googleapis/build/src/apis/gmail';
+import { access } from 'fs';
 
 @Injectable()
 export class PdfFilesService {
@@ -48,7 +50,7 @@ export class PdfFilesService {
     });
 
     const newRecent = await this.recentDocumentModel.create({
-      fileId: newPdfFile._id,
+      fileId: newPdfFile._id.toString(),
       userId: userId,
       date: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
     });
@@ -71,35 +73,114 @@ export class PdfFilesService {
 
     const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
 
+    const ownerInformation = await this.userModel.findById(file.ownerId);
+
+    if (userId) {
+      const recentDoc = await this.recentDocumentModel.findOne({
+        fileId: fileId,
+        userId,
+      });
+      const newDate = new Date();
+
+      if (recentDoc) {
+        recentDoc.date = newDate.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+        await recentDoc.save();
+      } else {
+        await this.recentDocumentModel.create({
+          fileId: file._id.toString(),
+          userId: userId,
+          date: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+        });
+      }
+    }
+
     if (shared) {
       const sharedItem = file.sharedLink.find((link) => link.token === shared);
-
       if (sharedItem) {
-        const sharedUser = file.sharedWith.find((user) => {
-          return user.userId.equals(userObjectId);
-        });
-        if (sharedUser) {
-          sharedUser.access = sharedItem.access;
-        } else {
-          file.sharedWith.push({
-            userId: userObjectId,
-            access: sharedItem.access,
+        if (userId) {
+          const sharedUser = file.sharedWith.find((user) => {
+            return user.userId.equals(userObjectId);
           });
-        }
+          if (sharedUser) {
+            sharedUser.access = sharedItem.access;
+          } else {
+            file.sharedWith.push({
+              userId: userObjectId,
+              access: sharedItem.access,
+            });
+          }
 
-        file.markModified('sharedWith');
-        await file.save();
-      }
+          file.markModified('sharedWith');
+          await file.save();
+
+          return {
+            file: file,
+            owner: {
+              gmail: ownerInformation?.gmail,
+              fullName: ownerInformation?.fullName,
+              avatar: ownerInformation?.avatar,
+            },
+            access: isOwner ? 'Owner' : sharedItem?.access,
+          };
+        }
+        return {
+          file,
+          owner: {
+            gmail: ownerInformation?.gmail,
+            fullName: ownerInformation?.fullName,
+            avatar: ownerInformation?.avatar,
+          },
+          access: 'Guest',
+        };
+      } else throw new BadRequestException('Shared not found');
+
+      // return {
+      //   file: file,
+      //   owner: {
+      //     gmail: ownerInformation?.gmail,
+      //     fullName: ownerInformation?.fullName,
+      //     avatar: ownerInformation?.avatar,
+      //   },
+      //   access: isOwner ? 'Owner' : sharedItem?.access,
+      // };
+    }
+
+    if (userId) {
+      if (isOwner)
+        return {
+          file,
+          owner: {
+            gmail: ownerInformation?.gmail,
+            fullName: ownerInformation?.fullName,
+            avatar: ownerInformation?.avatar,
+          },
+          access: 'Owner',
+        };
+
+      const permission = file.sharedWith.find((user) => user.userId.toString() === userId.toString());
+      if (!permission) throw new BadRequestException('You have no permission');
+
       return {
-        file: file,
-        access: sharedItem?.access,
+        file,
+        owner: {
+          gmail: ownerInformation?.gmail,
+          fullName: ownerInformation?.fullName,
+          avatar: ownerInformation?.avatar,
+        },
+        access: permission.access,
       };
     }
 
-    return {
-      file,
-      access: isOwner ? 'Owner' : 'Guest',
-    };
+    throw new BadRequestException('Shared not found');
+    // return {
+    //   file,
+    //   owner: {
+    //     gmail: ownerInformation?.gmail,
+    //     fullName: ownerInformation?.fullName,
+    //     avatar: ownerInformation?.avatar,
+    //   },
+    //   access: 'Guest',
+    // };
   }
 
   async setIsPublic(body: IsPublicDto, userId: Types.ObjectId | string) {
@@ -135,7 +216,7 @@ export class PdfFilesService {
       file.sharedLink = [];
       file.sharedWith = [];
     }
-    
+
     await file.save();
 
     return file;
@@ -162,19 +243,35 @@ export class PdfFilesService {
   async addUserPermission(userId: string | Types.ObjectId, userPermission: AddUserPermissionDto) {
     const { file, targetUserObjectId } = await this.handleCheckUserPermission(userId, userPermission);
 
-    const sharedUser = file.sharedWith.find((user) => user.userId.equals(targetUserObjectId));
-    if (sharedUser) {
-      sharedUser.access = userPermission.access;
+    const sharedUserIndex = file.sharedWith.findIndex((user) => user.userId.equals(targetUserObjectId));
+
+    if (sharedUserIndex !== -1) {
+      if (userPermission.access === 'Remove') {
+        await this.recentDocumentModel.deleteMany({
+          fileId: file._id.toString(),
+          userId: userPermission.userId.toString(),
+        });
+        file.sharedWith.splice(sharedUserIndex, 1);
+      } else {
+        file.sharedWith[sharedUserIndex].access = userPermission.access;
+      }
     } else {
       const newData = {
         userId: targetUserObjectId,
         access: userPermission.access,
       };
       file.sharedWith.push(newData as SharedUser);
+      await this.recentDocumentModel.create({
+        fileId: file._id.toString(),
+        userId: userPermission.userId,
+        date: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+      });
     }
 
     file.markModified('sharedWith');
     await file.save();
+
+    return file;
   }
 
   async handleCheckLinkPermission(userId: string | Types.ObjectId, addLinkPermission: AddLinkPermissionDto) {

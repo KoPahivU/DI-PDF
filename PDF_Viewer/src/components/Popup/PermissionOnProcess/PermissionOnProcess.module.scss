@@ -1,0 +1,81 @@
+.progress-bar-wrapper {
+  width: 300px;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #f7f4b9;
+  border: 2px solid #f5c731;
+  border-radius: 10px;
+  padding: 12px;
+  max-width: 400px;
+
+  * {
+    color: #e2c107;
+  }
+}
+
+.progress-bar {
+  height: 4px;
+  background-color: #f5c731;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.spinner {
+  width: 25px;
+  height: 25px;
+  --clr: #f5c731;
+  --clr-alpha: rgba(247, 197, 159, 0.1);
+  animation: spinner 1.6s infinite ease;
+  transform-style: preserve-3d;
+  position: relative;
+}
+
+.spinner > div {
+  background-color: var(--clr-alpha);
+  height: 100%;
+  position: absolute;
+  width: 100%;
+  border: 1.2px solid var(--clr);
+}
+
+.spinner div:nth-of-type(1) {
+  transform: translateZ(-8.8px) rotateY(180deg);
+}
+
+.spinner div:nth-of-type(2) {
+  transform: rotateY(-270deg) translateX(50%);
+  transform-origin: top right;
+}
+
+.spinner div:nth-of-type(3) {
+  transform: rotateY(270deg) translateX(-50%);
+  transform-origin: center left;
+}
+
+.spinner div:nth-of-type(4) {
+  transform: rotateX(90deg) translateY(-50%);
+  transform-origin: top center;
+}
+
+.spinner div:nth-of-type(5) {
+  transform: rotateX(-90deg) translateY(50%);
+  transform-origin: bottom center;
+}
+
+.spinner div:nth-of-type(6) {
+  transform: translateZ(8.8px);
+}
+
+@keyframes spinner {
+  0% {
+    transform: rotate(45deg) rotateX(-25deg) rotateY(25deg);
+  }
+
+  50% {
+    transform: rotate(45deg) rotateX(-385deg) rotateY(25deg);
+  }
+
+  100% {
+    transform: rotate(45deg) rotateX(-385deg) rotateY(385deg);
+  }
+}

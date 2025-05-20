@@ -1,5 +1,5 @@
 .wrapper {
-  margin: 80px 20px 20px 20px;
+  margin: 20px;
 }
 
 .header {
@@ -69,21 +69,6 @@
 
   &:hover {
     background-color: #f6f6f6;
-  }
-}
-
-.error-popup {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background-color: #fee9e7;
-  border: 1.5px solid #d05463;
-  border-radius: 10px;
-  padding: 12px;
-  max-width: 400px;
-
-  * {
-    color: #900b09;
   }
 }
 

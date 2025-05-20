@@ -54,7 +54,10 @@ export class AuthController {
       console.log('Google authentication failed, redirecting to sign in...');
       return res.redirect(`${process.env.FE_URI}/auth/signin?error=default-account`);
     }
-    const payload = { username: req.user.user.gmail, sub: req.user.user._id };
+    const payload = {
+      username: req.user.user?.gmail ? req.user.user?.gmail : req.user.newUser?.gmail,
+      sub: req.user.user?._id ? req.user.user?._id : req.user.newUser?._id,
+    };
     const jwt = this.jwtService.sign(payload);
     console.log(`Redirecting to: ${process.env.FE_URI}/auth?token=${jwt}`);
 

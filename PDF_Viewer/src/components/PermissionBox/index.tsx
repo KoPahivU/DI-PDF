@@ -1,14 +1,16 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useAuth } from '../../layout/DashBoardLayout';
 import { faChevronDown, faCopy, faGlobe, faLock, faXmark } from '@fortawesome/free-solid-svg-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { UserItem } from '../UserItem';
 import { AdminItem } from '../AdminItem';
-import { PdfData, sharedLink } from '../../pages/PdfViewer';
+import { PdfData, sharedLink, SharedUser } from '../../pages/PdfViewer';
 import styles from './PermissionBox.module.scss';
 import classNames from 'classnames/bind';
 import { SearchUser } from '../SearchUser';
 import Cookies from 'js-cookie';
+import { PermissionSuccess } from '../Popup/PermissionSuccess';
+import { PermissionError } from '../Popup/PermissionError';
+import { PermissionOnProcess } from '../Popup/PermissionOnProcess';
 
 const cx = classNames.bind(styles);
 
@@ -22,18 +24,20 @@ export function PermissionBox({
   pdfData: PdfData | null;
 }) {
   const token = Cookies.get('DITokens');
-  const profile = useAuth();
   console.log('pdf: ', pdfData);
   const [isPublic, setIsPublic] = useState<boolean>(pdfData?.isPublic || false);
   const [showDropdown, setShowDropdown] = useState(false);
+
+  const [linkResponsed, setLinkResponsed] = useState<boolean>(pdfData?.isPublic || false);
+  const [sharedUser, setSharedUser] = useState<SharedUser[] | undefined>(pdfData?.sharedWith);
   const [link, setLink] = useState<sharedLink[]>(pdfData?.sharedLink || []);
 
-  const toggleDropdown = () => setShowDropdown(!showDropdown);
+  const [saveError, setSaveError] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveProgress, setSaveProgress] = useState<number>(0);
+  const [saveIsLoading, setSaveIsLoading] = useState(false);
 
-  const selectOption = (value: boolean) => {
-    setIsPublic(value);
-    setShowDropdown(false);
-  };
+  const toggleDropdown = () => setShowDropdown(!showDropdown);
 
   useEffect(() => {
     if (pdfData?.isPublic !== undefined) {
@@ -41,11 +45,15 @@ export function PermissionBox({
     }
   }, [pdfData]);
 
-  useEffect(() => {
-    patchPublic();
-  }, [isPublic]);
+  const toggleOption = (state: boolean) => {
+    setIsPublic(state);
+    setShowDropdown(false);
+    patchPublic(state);
+  };
 
-  const patchPublic = async () => {
+  console.log(pdfData);
+
+  const patchPublic = async (newState: boolean) => {
     try {
       const res = await fetch(`${process.env.REACT_APP_BE_URI}/pdf-files/public`, {
         method: 'PATCH',
@@ -55,7 +63,7 @@ export function PermissionBox({
         },
         body: JSON.stringify({
           fileId: pdfData?._id,
-          isPublic,
+          isPublic: newState,
         }),
       });
 
@@ -67,8 +75,9 @@ export function PermissionBox({
 
       const responseData = await res.json();
       console.log('Response patchPublic: ', responseData.data);
-      if (isPublic) {
+      if (newState) {
         setLink(responseData.data.sharedLink);
+        setLinkResponsed(true);
       }
     } catch (error) {
       console.error('patchPublic error:', error);
@@ -76,27 +85,83 @@ export function PermissionBox({
     }
   };
 
+  console.log(sharedUser);
+
+  const postUserPermission = async () => {
+    try {
+      if (sharedUser && sharedUser.length > 0) {
+        setSaveIsLoading(true);
+
+        const responses = await Promise.all(
+          sharedUser.map(async (item, index) => {
+            const percent = ((index + 1) / sharedUser.length) * 100;
+            setSaveProgress(percent);
+            const res = await fetch(`${process.env.REACT_APP_BE_URI}/pdf-files/add-user-permission`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                fileId: pdfData?._id,
+                userId: item.userId,
+                access: item.access,
+              }),
+            });
+
+            if (!res.ok) {
+              const errorData = await res.json();
+              console.log('Error Response:', errorData);
+              setSaveIsLoading(false);
+              setSaveSuccess(false);
+              setSaveError(true);
+              setTimeout(() => {
+                setSaveError(false);
+              }, 1000);
+              throw new Error(errorData.message || 'Invalid credentials');
+            }
+
+            const responseData = await res.json();
+            console.log('Response postUserPermission: ', responseData.data);
+            return responseData.data;
+          }),
+        );
+        setSaveIsLoading(false);
+        setSaveProgress(0);
+        console.log('All permissions updated:', responses);
+        setSaveSuccess(true);
+        setTimeout(() => {
+          setSaveSuccess(false);
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('postUserPermission error:', error);
+    }
+  };
+
   return (
     <div className={cx('modal-overlay')}>
       <div className={cx('modal')}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <h1 style={{ fontSize: '2.5rem' }}>Share '{pdfData?.fileName}'</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <h1 style={{ fontSize: '2.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            Share '{pdfData?.fileName}'
+          </h1>
           <FontAwesomeIcon icon={faXmark} className={cx('exit')} onClick={() => setPermissionPopup(false)} />
         </div>
-        {isPublic && <SearchUser fileId={pdfData?._id} />}
+        {isPublic && <SearchUser fileId={pdfData?._id} sharedUser={sharedUser} setSharedUser={setSharedUser} />}
 
-        <AdminItem userData={null} />
-        {isPublic && (
+        <AdminItem ownerId={pdfData?.ownerId} />
+        {isPublic && linkResponsed && (
           <div className={cx('user-list')}>
-            <UserItem userData={null} />
-            <UserItem userData={null} />
-            <UserItem userData={null} />
-            <UserItem userData={null} />
-            <UserItem userData={null} />
+            {sharedUser &&
+              sharedUser.length > 0 &&
+              sharedUser.map((item, index) => {
+                return <UserItem key={index} sharedUser={item} setSharedUser={setSharedUser} />;
+              })}
           </div>
         )}
 
-        {isPublic && (
+        {isPublic && linkResponsed && (
           <div style={{ fontSize: '1.7rem', fontWeight: '600' }}>
             Public Access
             <div
@@ -166,14 +231,26 @@ export function PermissionBox({
             {isPublic ? 'Public' : 'Private'}
             <FontAwesomeIcon icon={faChevronDown} style={{ marginLeft: 'auto' }} />
           </div>
-          <div className={cx('save')}>Save</div>
+          <div className={cx('save')} onClick={postUserPermission}>
+            Save
+          </div>
           {showDropdown && (
             <div className={cx('dropdown-options')}>
-              <div className={cx('option')} onClick={() => selectOption(true)}>
+              <div
+                className={cx('option')}
+                onClick={() => {
+                  toggleOption(true);
+                }}
+              >
                 <FontAwesomeIcon icon={faGlobe} style={{ marginRight: '8px', color: '#79c0da' }} />
                 Public
               </div>
-              <div className={cx('option')} onClick={() => selectOption(false)}>
+              <div
+                className={cx('option')}
+                onClick={() => {
+                  toggleOption(false);
+                }}
+              >
                 <FontAwesomeIcon icon={faLock} style={{ marginRight: '8px', color: '#900b09' }} />
                 Private
               </div>
@@ -181,6 +258,9 @@ export function PermissionBox({
           )}
         </div>
       </div>
+      {saveSuccess && <PermissionSuccess setSaveSuccess={setSaveSuccess} />}
+      {saveError && <PermissionError setSaveError={setSaveError} />}
+      {saveIsLoading && <PermissionOnProcess saveProgress={saveProgress} />}
     </div>
   );
 }

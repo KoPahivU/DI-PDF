@@ -9,7 +9,7 @@
 }
 
 .modal {
-  min-width: 40%;
+  width: 40vw;
   position: fixed;
   top: 50%;
   left: 50%;
@@ -33,7 +33,7 @@
 }
 
 .user-list {
-  height: 155px;
+  height: 160px;
   overflow-y: auto;
   border: 1px solid #ddd;
   border-radius: 6px;

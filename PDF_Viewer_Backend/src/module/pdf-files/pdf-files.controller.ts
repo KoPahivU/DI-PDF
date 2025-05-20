@@ -10,6 +10,7 @@ import {
   UploadedFile,
   Request,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { PdfFilesService } from './pdf-files.service';
 import { CreatePdfFileDto } from './dto/create-pdf-file.dto.dto';
@@ -21,19 +22,28 @@ import { AddLinkPermissionDto } from './dto/add-link-permission.dto';
 import { DeleteUserPermissionDto } from './dto/delete-user-permisson.dto';
 import { Public } from '@/common/decorator/customize';
 import { IsPublicDto } from './dto/is-public.dto';
+import { FileSizeGuard } from '@/auth/guards/file-size.guard';
 
 @Controller('pdf-files')
 export class PdfFilesController {
   constructor(private readonly pdfFilesService: PdfFilesService) {}
 
   @Post('upload')
+  @UseGuards(new FileSizeGuard(20 * 1024 * 1024))
   @UseInterceptors(
     FileInterceptor('file', {
+      limits: {
+        fileSize: 20 * 1024 * 1024,
+      },
       storage: diskStorage({
         filename: (req, file, cb) => {
           cb(null, file.originalname);
         },
       }),
+      fileFilter: (req, file, cb) => {
+        console.log(`Uploading file: ${file.filename}, size limit: 20MB`);
+        cb(null, true);
+      },
     }),
   )
   async uploadPdf(@UploadedFile() file: Express.Multer.File, @Request() req, @Body() fileSize: CreatePdfFileDto) {
@@ -48,7 +58,7 @@ export class PdfFilesController {
 
   @Patch('public')
   async setIsPublic(@Body() body: IsPublicDto, @Request() req) {
-    return await this.pdfFilesService.setIsPublic(body, req.user._id)
+    return await this.pdfFilesService.setIsPublic(body, req.user._id);
   }
 
   @Post('add-user-permission')

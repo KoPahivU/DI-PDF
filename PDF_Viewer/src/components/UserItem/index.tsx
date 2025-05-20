@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './UserItem.module.scss';
 import classNames from 'classnames/bind';
 import { useAuth } from '../../layout/DashBoardLayout';
+import { SharedUser } from '../../pages/PdfViewer';
+import Cookies from 'js-cookie';
 
 const cx = classNames.bind(styles);
 
@@ -10,21 +12,74 @@ export interface UserItemInterface {
   fullName: string;
   gmail: string;
   avatar: string;
-  access: string;
+  access: string | undefined;
 }
 
-export function UserItem({ userData }: { userData: UserItemInterface | null }) {
+export function UserItem({ sharedUser, setSharedUser }: { sharedUser: SharedUser | null; setSharedUser: Function }) {
   const profile = useAuth();
-  const [access, setAccess] = useState(userData?.access || 'Viewer');
+  const token = Cookies.get('DITokens');
+  const [access, setAccess] = useState(sharedUser?.access || 'View');
+  const [userData, setUserData] = useState<UserItemInterface | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setAccess(value);
-    console.log(`User ${userData?.userId} set to: ${value}`);
+
+    if (!sharedUser) return;
+
+    setSharedUser((prev: SharedUser[]) =>
+      prev.map((user) => (user.userId === sharedUser.userId ? { ...user, access: value } : user)),
+    );
+    console.log(`User ${sharedUser?.userId} set to: ${value}`);
+  };
+
+  useEffect(() => {
+    if (sharedUser?.userId) {
+      getInformation();
+    }
+  }, [sharedUser?.userId]);
+
+  const getInformation = async () => {
+    try {
+      console.log('hoh', sharedUser?.access);
+
+      const res = await fetch(`${process.env.REACT_APP_BE_URI}/user/user-information/${sharedUser?.userId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.log('Error Response:', errorData);
+        throw new Error(errorData.message || 'Invalid credentials');
+      }
+
+      const responseData = await res.json();
+      console.log('Response getInformation: ', responseData.data);
+      setUserData({
+        userId: responseData.data._id,
+        fullName: responseData.data.fullName,
+        gmail: responseData.data.gmail,
+        avatar: responseData.data.avatar,
+        access: sharedUser?.access,
+      });
+    } catch (error) {
+      console.error('patchPublic error:', error);
+      return;
+    }
   };
 
   return (
-    <div style={{ height: '45px', display: 'flex', gap: '7px', marginBottom: '10px' }}>
+    <div
+      style={{
+        height: '45px',
+        display: 'flex',
+        gap: '7px',
+        marginBottom: '10px',
+      }}
+    >
       <img
         src={
           userData?.avatar === undefined || userData.avatar === ''
@@ -48,7 +103,7 @@ export function UserItem({ userData }: { userData: UserItemInterface | null }) {
         value={access}
         onChange={handleChange}
         style={{
-          height: '40px',
+          height: '35px',
           marginLeft: 'auto',
           padding: '6px 8px',
           fontSize: '1.2rem',
@@ -56,8 +111,8 @@ export function UserItem({ userData }: { userData: UserItemInterface | null }) {
           border: '0px solid #FFFFFF',
         }}
       >
-        <option value="Editor">Editor</option>
-        <option value="Viewer">Viewer</option>
+        <option value="Edit">Edit</option>
+        <option value="View">View</option>
         <option value="Remove">Remove</option>
       </select>
     </div>

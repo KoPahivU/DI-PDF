@@ -21,21 +21,21 @@ export class RecentDocumentService {
     private readonly pdfService: PdfFilesService,
   ) {}
 
-  async create(fileId: Types.ObjectId | string, userId: Types.ObjectId) {
+  async create(fileId: string, userId: Types.ObjectId) {
     const fiLeIdObject = new mongoose.Types.ObjectId(fileId);
     const recentDoc = await this.recentDocumentModel.findOne({
-      fileId: fiLeIdObject,
+      fileId: fileId,
       userId,
     });
+    console.log(recentDoc);
 
     try {
       await this.pdfService.getPdf(fiLeIdObject, userId, null);
     } catch {
       throw new BadRequestException('You have no permission');
     }
+
     const newDate = new Date();
-    console.log('newDate ISO:', newDate.toISOString());
-    console.log('newDate Local:', newDate.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }));
     if (recentDoc) {
       recentDoc.date = newDate.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
       await recentDoc.save();
@@ -51,17 +51,32 @@ export class RecentDocumentService {
     }
   }
 
+  parseCustomDate(str: string): Date {
+    const [timePart, datePart] = str.split(' ');
+    const [hh, mm, ss] = timePart.split(':').map(Number);
+    const [dd, MM, yyyy] = datePart.split('/').map(Number);
+    return new Date(yyyy, MM - 1, dd, hh, mm, ss);
+  }
+
   async findAll(paginationDto: PaginationDto, userId: Types.ObjectId | string) {
     const { page = 1, limit = 10 } = paginationDto;
     const skip = (page - 1) * limit;
 
     const user = await this.userModel.findById(userId);
-
     if (!user) throw new BadRequestException('User not found.');
 
-    const recentDocs = await this.recentDocumentModel.find({ userId }).skip(skip).limit(limit).sort({ date: -1 });
+    const allDocs = await this.recentDocumentModel.find({ userId });
 
-    const dataPromises = recentDocs.map(async (recentDoc) => {
+    // Sắp xếp thủ công theo thời gian thực
+    const sortedDocs = allDocs.sort((a, b) => {
+      const dateA = this.parseCustomDate(a.date);
+      const dateB = this.parseCustomDate(b.date);
+      return dateB.getTime() - dateA.getTime(); // Mới nhất trước
+    });
+
+    const paginatedDocs = sortedDocs.slice(skip, skip + limit);
+
+    const dataPromises = paginatedDocs.map(async (recentDoc) => {
       const pdfFile = await this.pdfFileModel.findById(recentDoc.fileId);
       const user = await this.userModel.findById(pdfFile?.ownerId);
       return {
@@ -72,8 +87,7 @@ export class RecentDocumentService {
     });
 
     const returnData = await Promise.all(dataPromises);
-
-    const total = await this.recentDocumentModel.countDocuments({ userId });
+    const total = allDocs.length;
 
     return {
       returnData,
