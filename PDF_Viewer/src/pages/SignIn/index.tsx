@@ -21,6 +21,8 @@ function isValidPassword(password: string) {
 
 function SignIn() {
   const navigate = useNavigate();
+  const token = Cookies.get('DITokens');
+  if (token) navigate('/');
 
   const [isLoading, setIsLoading] = useState(false);
   const [passwordVisbility, setPasswordVisbility] = useState(false);

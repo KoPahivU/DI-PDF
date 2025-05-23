@@ -7,6 +7,7 @@ import email from '~/assets/svg/email.svg';
 import { useNavigate } from 'react-router-dom';
 import styles from './SignUp.module.scss';
 import classNames from 'classnames/bind';
+import Cookies from 'js-cookie';
 
 const cx = classNames.bind(styles);
 
@@ -22,6 +23,8 @@ function isValidPassword(password: string) {
 
 function SignUp() {
   const navigate = useNavigate();
+  const token = Cookies.get('DITokens');
+  if (token) navigate('/');
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -48,7 +51,7 @@ function SignUp() {
   const [reTypePasswordVisbility, setReTypePasswordVisbility] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [successPopup, setSuccessPopup] = useState(false);
+  const [successPopup, setSuccessPopup] = useState(true);
 
   const [acceptStatus, setAcceptStatus] = useState(false);
 
@@ -311,6 +314,8 @@ function SignUp() {
           <div className={cx('success-popup')}>
             <FontAwesomeIcon icon={faXmark} className={cx('exit')} onClick={() => setSuccessPopup(false)} />
             <img className={cx('image')} src={email} alt="pic" />
+            <h2>Verify your email address</h2>
+
             <div className={cx('email-text')}>
               <p>
                 We’ve just sent a verification email to <strong>{refs?.email?.current?.value}</strong>. Please check

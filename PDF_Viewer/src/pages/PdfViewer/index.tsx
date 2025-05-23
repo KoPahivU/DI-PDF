@@ -5,7 +5,14 @@ import classNames from 'classnames/bind';
 import Cookies from 'js-cookie';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faArrowUpFromBracket, faDownload, faSync } from '@fortawesome/free-solid-svg-icons';
+import {
+  faArrowLeft,
+  faArrowUpFromBracket,
+  faDownload,
+  faMinus,
+  faPlus,
+  faSync,
+} from '@fortawesome/free-solid-svg-icons';
 import { PermissionBox } from '../../components/PermissionBox';
 import { useAuth } from '../../layout/DashBoardLayout';
 import { Loading } from '../../components/Loading';
@@ -140,6 +147,8 @@ const getCachedPdf = (pdfId: string): PdfCacheEntry | null => {
   return getPdfCache()[pdfId] || null;
 };
 
+const ZOOM_LEVELS = [50, 75, 90, 100, 125, 150, 200];
+
 const PdfViewer: React.FC = () => {
   const token = Cookies.get('DITokens');
   const navigate = useNavigate();
@@ -158,7 +167,9 @@ const PdfViewer: React.FC = () => {
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-  const viewer = useRef<HTMLDivElement | null>(null);
+  const viewerRef = useRef<HTMLDivElement>(null);
+  const instanceRef = useRef<any>(null);
+  const [zoomLevel, setZoomLevel] = useState(100);
 
   const checkFileModified = useCallback(
     async (pdfId: string, cachedEntry: PdfCacheEntry) => {
@@ -314,49 +325,129 @@ const PdfViewer: React.FC = () => {
   const webViewerInitialized = useRef(false);
 
   useEffect(() => {
-    if (viewer.current && pdfData && !webViewerInitialized.current) {
+    if (viewerRef.current && pdfData && !webViewerInitialized.current) {
       WebViewer(
         {
           path: '/lib/webviewer',
           licenseKey: 'demo:1747966151004:61fcaa7a03000000004eb811cb6510e62177a6ce7cd9ebf0e5b241b5d5',
-          initialDoc: pdfData.url,
+          initialDoc: `${pdfData.url}`,
         },
-        viewer.current,
+        viewerRef.current!,
       ).then((instance) => {
-        //TODO ...
-        // const { UI } = instance;
-        // const { Feature } = UI;
-        // console.log('UI: ', UI);
-        // console.log('Feature: ', Feature);
-        // UI.disableFeatures([Feature.Print, Feature.Download]);
-        // UI.disableElements(['saveAsButton', 'leftPanelButton']);
+        instanceRef.current = instance;
 
-        // const { UI, Core } = instance;
-        // const { Tools } = Core;
+        instance.Core.documentViewer.addEventListener('documentLoaded', () => {
+          instance.UI.setZoomLevel(`${zoomLevel}%`);
+        });
 
-        // console.log(Core);
-
-        // const panToolButton = new UI.Components.ToolButton({
-        //   dataElement: 'panToolButton',
-        //   toolName: Tools.ToolNames.PAN,
-        // });
-
-        // const bottomHeader = new instance.UI.Components.ModularHeader({
-        //   dataElement: 'default-bottom-header',
-        //   placement: 'bottom',
-        //   grow: 0,
-        //   gap: 12,
-        //   position: 'start',
-        //   style: {},
-        //   items: [panToolButton],
-        // });
-
-        // instance.UI.setModularHeaders([bottomHeader]);
+        const { UI } = instance;
+        const { Feature } = UI;
+        console.log('UI: ', UI);
+        console.log('Feature: ', Feature);
+        UI.disableFeatures([Feature.Print, Feature.Download]);
+        
+        UI.disableElements([
+          'menuButton',
+          'leftPanelButton',
+          'view-controls-toggle-button',
+          'panToolButton',
+          'annotationEditToolButton',
+          'divider-0.1',
+          'divider-0.3',
+          'zoom-container',
+          'zoom-toggle-button',
+          'zoomOutButton',
+          'zoomOverlayButton',
+          'zoomInButton',
+          'groupedLeftHeaderButtons',
+          'toolbarGroup-View',
+          'toolbarGroup-Insert',
+          'searchPanelToggle',
+          'notesPanelToggle',
+          'toolbarGroup-Edit',
+          'toolbarGroup-FillAndSign',
+          'toolbarGroup-Forms',
+          'page-nav-floating-header',
+        ]);
 
         webViewerInitialized.current = true;
       });
     }
   }, [pdfData]);
+
+  useEffect(() => {
+    const viewerEl = viewerRef.current;
+    if (!viewerEl) return;
+
+    const handleWheelZoom = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+
+      e.preventDefault();
+
+      const direction = e.deltaY > 0 ? 'out' : 'in';
+      const currentIndex = ZOOM_LEVELS.findIndex((z) => z === zoomLevel);
+
+      if (direction === 'in' && currentIndex < ZOOM_LEVELS.length - 1) {
+        setZoom(ZOOM_LEVELS[currentIndex + 1]);
+      } else if (direction === 'out' && currentIndex > 0) {
+        setZoom(ZOOM_LEVELS[currentIndex - 1]);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.ctrlKey) return;
+
+      if (e.key === '-' || e.key === '_') {
+        e.preventDefault();
+        const currentIndex = ZOOM_LEVELS.findIndex((z) => z === zoomLevel);
+        if (currentIndex > 0) setZoom(ZOOM_LEVELS[currentIndex - 1]);
+      }
+
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault();
+        const currentIndex = ZOOM_LEVELS.findIndex((z) => z === zoomLevel);
+        if (currentIndex < ZOOM_LEVELS.length - 1) setZoom(ZOOM_LEVELS[currentIndex + 1]);
+      }
+    };
+
+    viewerEl.addEventListener('wheel', handleWheelZoom, { passive: false });
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      viewerEl.removeEventListener('wheel', handleWheelZoom);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [zoomLevel]);
+
+  const setZoom = (level: number) => {
+    const boundedLevel = Math.max(50, Math.min(200, level));
+    setZoomLevel(boundedLevel);
+    if (instanceRef.current) {
+      instanceRef.current.UI.setZoomLevel(`${boundedLevel}%`);
+    }
+  };
+
+  const handleZoomChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setZoom(Number(e.target.value));
+  };
+
+  const zoomIn = () => {
+    const currentIndex = ZOOM_LEVELS.findIndex((z) => z === zoomLevel);
+    if (currentIndex < ZOOM_LEVELS.length - 1) {
+      const newLevel = ZOOM_LEVELS[currentIndex + 1];
+      setZoomLevel(newLevel);
+      instanceRef.current?.UI.setZoomLevel(`${newLevel}%`);
+    }
+  };
+
+  const zoomOut = () => {
+    const currentIndex = ZOOM_LEVELS.findIndex((z) => z === zoomLevel);
+    if (currentIndex > 0) {
+      const newLevel = ZOOM_LEVELS[currentIndex - 1];
+      setZoomLevel(newLevel);
+      instanceRef.current?.UI.setZoomLevel(`${newLevel}%`);
+    }
+  };
 
   if (fileStatus === 'Not found') {
     return <NotFoundLayout />;
@@ -369,11 +460,12 @@ const PdfViewer: React.FC = () => {
       <div
         style={{
           width: '100vw',
-          height: 'calc(100% - 60px)',
+          height: 'calc(100%-60px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: 'white',
+          overflowX: 'auto',
         }}
       >
         <Loading />
@@ -437,19 +529,80 @@ const PdfViewer: React.FC = () => {
         )}
       </div> */}
       <div
-        className="webviewer"
-        ref={viewer}
         style={{
+          position: 'relative',
           height: 'calc(100vh - 160px)',
           width: 'calc(100vw - 50px)',
-          margin: '20px',
+          margin: '10px',
           borderRadius: '20px',
-          overflowX: 'hidden',
-          overflowY: 'hidden',
           backgroundColor: '#fff',
-          boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)', // tuỳ chọn
+          boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          border: '1px solid #E4E4E4',
         }}
-      ></div>
+      >
+        {/* Scrollable PDF Viewer Area */}
+        <div
+          ref={viewerRef}
+          style={{
+            flex: 1,
+            overflowY: 'hidden',
+          }}
+        >
+          {/* Render PDF pages here */}
+        </div>
+
+        {/* Fixed Zoom Controls */}
+        <div
+          style={{
+            zIndex: 10,
+            background: '#fff',
+            padding: '6px 12px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+          }}
+        >
+          <button style={{ backgroundColor: 'white' }} onClick={zoomOut} disabled={zoomLevel === 50}>
+            <FontAwesomeIcon
+              icon={faMinus}
+              style={{
+                width: '15px',
+                height: '15px',
+                padding: '5px',
+                border: '1px solid black',
+                cursor: 'pointer',
+                borderRadius: '50%',
+              }}
+            />
+          </button>
+          <select style={{ padding: '5px', border: 'white' }} value={zoomLevel.toString()} onChange={handleZoomChange}>
+            {ZOOM_LEVELS.map((level) => (
+              <option key={level} value={level.toString()}>
+                {level}%
+              </option>
+            ))}
+          </select>
+          <button style={{ backgroundColor: 'white' }} onClick={zoomIn} disabled={zoomLevel === 200}>
+            <FontAwesomeIcon
+              icon={faPlus}
+              style={{
+                width: '15px',
+                height: '15px',
+                padding: '5px',
+                border: '1px solid black',
+                cursor: 'pointer',
+                borderRadius: '50%',
+              }}
+            />
+          </button>
+        </div>
+      </div>
       {permissionPopup && (
         <PermissionBox access={pdfData?.access} setPermissionPopup={setPermissionPopup} pdfData={pdfData} />
       )}{' '}
