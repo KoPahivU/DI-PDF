@@ -22,14 +22,12 @@ import { AddLinkPermissionDto } from './dto/add-link-permission.dto';
 import { DeleteUserPermissionDto } from './dto/delete-user-permisson.dto';
 import { Public } from '@/common/decorator/customize';
 import { IsPublicDto } from './dto/is-public.dto';
-import { FileSizeGuard } from '@/auth/guards/file-size.guard';
 
 @Controller('pdf-files')
 export class PdfFilesController {
   constructor(private readonly pdfFilesService: PdfFilesService) {}
 
   @Post('upload')
-  @UseGuards(new FileSizeGuard(20 * 1024 * 1024))
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {

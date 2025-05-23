@@ -136,8 +136,8 @@ export class UserService {
     });
 
     this.mailerService.sendMail({
-      to: user.gmail, // list of receivers
-      subject: 'Activate your DI PDF account', // Subject line
+      to: user.gmail,
+      subject: 'Activate your DI PDF account',
       template: 'register',
       context: {
         url: process.env.FE_URI,

@@ -31,8 +31,8 @@ async function bootstrap() {
   // Bật CORS
   app.enableCors({
     origin: process.env.FE_URI,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    allowedHeaders: 'Content-Type, Authorization',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Authorization, If-Modified-Since',
     credentials: true,
   });
 

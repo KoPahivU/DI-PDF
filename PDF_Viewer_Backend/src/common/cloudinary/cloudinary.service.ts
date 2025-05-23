@@ -13,6 +13,13 @@ export class CloudinaryService {
     });
   }
 
+  async uploadImageFromUrl(imageUrl: string): Promise<UploadApiResponse> {
+    return cloudinary.uploader.upload(imageUrl, {
+      folder: 'avatars',
+      transformation: [{ width: 200, height: 200, crop: 'thumb', gravity: 'face' }],
+    });
+  }
+
   async uploadImage(file: Express.Multer.File): Promise<UploadApiResponse> {
     return new Promise((resolve, reject) => {
       cloudinary.uploader

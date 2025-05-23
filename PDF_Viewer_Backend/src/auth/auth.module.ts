@@ -11,10 +11,12 @@ import googleOauthConfig from './config/google-oauth.config';
 import { GoogleStrategy } from './passport/google.strategy';
 import { UserModule } from '@/module/user/user.module';
 import { User, UserSchema } from '@/module/user/schemas/user.schema';
+import { CloudinaryModule } from '@/common/cloudinary/cloudinary.module';
 
 @Module({
   imports: [
     UserModule,
+    CloudinaryModule,
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     JwtModule.registerAsync({
       global: true,
