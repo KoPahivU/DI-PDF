@@ -324,12 +324,34 @@ const PdfViewer: React.FC = () => {
         viewer.current,
       ).then((instance) => {
         //TODO ...
-        const { UI } = instance;
-        const { Feature } = UI;
-        console.log('UI: ', UI);
-        console.log('Feature: ', Feature);
-        UI.disableFeatures([Feature.Print, Feature.Download]);
-        UI.disableElements(['saveAsButton', 'leftPanelButton']);
+        // const { UI } = instance;
+        // const { Feature } = UI;
+        // console.log('UI: ', UI);
+        // console.log('Feature: ', Feature);
+        // UI.disableFeatures([Feature.Print, Feature.Download]);
+        // UI.disableElements(['saveAsButton', 'leftPanelButton']);
+
+        // const { UI, Core } = instance;
+        // const { Tools } = Core;
+
+        // console.log(Core);
+
+        // const panToolButton = new UI.Components.ToolButton({
+        //   dataElement: 'panToolButton',
+        //   toolName: Tools.ToolNames.PAN,
+        // });
+
+        // const bottomHeader = new instance.UI.Components.ModularHeader({
+        //   dataElement: 'default-bottom-header',
+        //   placement: 'bottom',
+        //   grow: 0,
+        //   gap: 12,
+        //   position: 'start',
+        //   style: {},
+        //   items: [panToolButton],
+        // });
+
+        // instance.UI.setModularHeaders([bottomHeader]);
 
         webViewerInitialized.current = true;
       });
