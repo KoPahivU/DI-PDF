@@ -2,6 +2,25 @@
   margin: 20px;
 }
 
+.drag-overlay {
+  position: fixed; // Bao phủ toàn bộ giao diện
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(128, 128, 128, 0.5); // Màu xám mờ
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  pointer-events: none; // Cho phép các sự kiện (drop) xuyên qua xuống div chứa
+  p {
+    color: #fff;
+    font-size: 24px;
+    font-weight: bold;
+  }
+}
+
 .header {
   display: flex;
   align-items: center;
