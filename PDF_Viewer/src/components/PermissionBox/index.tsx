@@ -3,7 +3,7 @@ import { faChevronDown, faCopy, faGlobe, faLock, faXmark } from '@fortawesome/fr
 import { useEffect, useState } from 'react';
 import { UserItem } from '../UserItem';
 import { AdminItem } from '../AdminItem';
-import { PdfData, sharedLink, SharedUser } from '../../pages/PdfViewer';
+import { PdfData, SharedLink, SharedUser } from '../../pages/PdfViewer';
 import styles from './PermissionBox.module.scss';
 import classNames from 'classnames/bind';
 import { SearchUser } from '../SearchUser';
@@ -30,7 +30,7 @@ export function PermissionBox({
 
   const [linkResponsed, setLinkResponsed] = useState<boolean>(pdfData?.isPublic || false);
   const [sharedUser, setSharedUser] = useState<SharedUser[] | undefined>(pdfData?.sharedWith);
-  const [link, setLink] = useState<sharedLink[]>(pdfData?.sharedLink || []);
+  const [link, setLink] = useState<SharedLink[]>(pdfData?.sharedLink || []);
 
   const [saveError, setSaveError] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);

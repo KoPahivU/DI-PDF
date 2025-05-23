@@ -14,8 +14,7 @@ import { DeleteUserPermissionDto } from './dto/delete-user-permisson.dto';
 import { DeleteLinkPermissionDto } from './dto/delete-link-permisson.dto';
 import { RecentDocument } from '../recent-document/schemas/recent-document.schema';
 import { IsPublicDto } from './dto/is-public.dto';
-import { gmail } from 'googleapis/build/src/apis/gmail';
-import { access } from 'fs';
+import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class PdfFilesService {
@@ -27,6 +26,7 @@ export class PdfFilesService {
     @InjectModel(RecentDocument.name)
     private readonly recentDocumentModel: Model<RecentDocument>,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly mailerService: MailerService,
   ) {}
 
   async uploadPdf(file: Express.Multer.File, userId: Types.ObjectId | string, fileSizeDto: CreatePdfFileDto) {
@@ -265,6 +265,28 @@ export class PdfFilesService {
         fileId: file._id.toString(),
         userId: userPermission.userId,
         date: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+      });
+
+      const user = await this.userModel.findById(userPermission.userId);
+      const owner = await this.userModel.findById(userId);
+      this.mailerService.sendMail({
+        to: user?.gmail,
+        subject: 'DI-PDF Invite Email',
+        template: 'invite',
+        context: {
+          owner: owner?.fullName,
+          permission: userPermission.access,
+          fileName: file.fileName,
+          inviteName: user?.fullName,
+          url: `${process.env.FE_URI}/file/${file._id}`,
+        },
+        attachments: [
+          {
+            filename: 'logo.png',
+            path: process.cwd() + '/src/mail/assets/logo.png',
+            cid: 'logo',
+          },
+        ],
       });
     }
 
