@@ -77,7 +77,8 @@ function DashBoard() {
   const [totalDocs, setTotalDocs] = useState(0);
   const [pageCount, setPageCount] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
-  //   const [showUpload, setShowUpload] = useState(true);
+
+  const [isDragging, setIsDragging] = useState(false);
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -87,8 +88,40 @@ function DashBoard() {
 
   console.log('Token: ', token);
 
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      // Kiểm tra kích thước và định dạng
+      if (droppedFile.size > maxSize || droppedFile.type !== 'application/pdf') {
+        setWarning('Please ensure the upload file is not more than 20MB and in .pdf format.');
+        setWarningPopup(true);
+        setTimeout(() => setWarningPopup(false), 2000);
+        setFile(null);
+        return;
+      }
+      setFile(droppedFile);
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
   const toggleDropdown = () => {
-    console.log('Toggle');
     setDropdownOpen((prev) => !prev);
   };
 
@@ -204,46 +237,6 @@ function DashBoard() {
       setFile(selectedFile);
     }
   };
-
-  // const uploadFile = async () => {
-  //   try {
-  //     if (!file) {
-  //       return;
-  //     }
-  //     const body = new FormData();
-  //     body.append('file', file);
-  //     body.append('fileName', file?.name);
-  //     body.append('fileSize', file?.size.toString());
-
-  //     const res = await fetch(`${process.env.REACT_APP_BE_URI}/pdf-files/upload`, {
-  //       method: 'POST',
-  //       headers: {
-  //         Authorization: `Bearer ${token}`,
-  //       },
-  //       body: body,
-  //     });
-
-  //     if (!res.ok) {
-  //       const errorData = await res.json();
-  //       console.log('Error Response:', errorData);
-  //       throw new Error(errorData.message || 'Invalid credentials');
-  //     }
-
-  //     const responseData = await res.json();
-  //     setSuccessPopup(true);
-  //     setTimeout(() => {
-  //       setSuccessPopup(false);
-  //       setTimeout(() => {
-  //         window.location.reload();
-  //       }, 1000);
-  //     }, 2000);
-
-  //     console.log('Response: ', responseData.data);
-  //   } catch (error) {
-  //     console.error('Post subject error:', error);
-  //     return;
-  //   }
-  // };
 
   const uploadFile = async () => {
     if (!file) return;
@@ -381,7 +374,20 @@ function DashBoard() {
   }, [isLoading, currentPage, pageCount]);
 
   return token ? (
-    <div className={cx('wrapper')}>
+    <div
+      className={cx('wrapper')}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onDragEnd={handleDragEnd}
+    >
+      {/* Overlay hiển thị khi đang kéo file vào */}
+      {isDragging && (
+        <div className={cx('drag-overlay')}>
+          <p>Drag and drop PDF files here to upload</p>
+        </div>
+      )}
       {/* File header */}
       <div className={cx('header')}>
         <div className={cx('left-header')}>
