@@ -18,7 +18,8 @@ import { useAuth } from '../../layout/DashBoardLayout';
 import { Loading } from '../../components/Loading';
 import NotFoundLayout from '../../layout/NotFoundLayout';
 import { NoPermission } from '../../components/NoPermission';
-import WebViewer from '@pdftron/webviewer';
+import WebViewer, { WebViewerInstance } from '@pdftron/webviewer';
+import { Shape } from '~/components/DropDown/Shape';
 
 const cx = classNames.bind(styles);
 
@@ -168,8 +169,13 @@ const PdfViewer: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   const viewerRef = useRef<HTMLDivElement>(null);
+  const [instance, setInstance] = useState<WebViewerInstance | null>(null);
+
   const instanceRef = useRef<any>(null);
   const [zoomLevel, setZoomLevel] = useState(100);
+
+  const [shapeDropDown, setShapeDropDown] = useState(true);
+  const [textDropDown, setTextDropDown] = useState(true);
 
   const checkFileModified = useCallback(
     async (pdfId: string, cachedEntry: PdfCacheEntry) => {
@@ -311,15 +317,9 @@ const PdfViewer: React.FC = () => {
   const toggleDownload = async () => {
     if (!pdfData) return;
 
-    const cached = getCachedPdf(pdfData._id);
-    const urlToDownload = cached?.blobUrl || pdfData.url;
-
-    const link = document.createElement('a');
-    link.href = urlToDownload;
-    link.setAttribute('download', pdfData.fileName || 'document.pdf');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (instance) {
+      instance.UI.downloadPdf({ filename: pdfData.fileName });
+    }
   };
 
   const webViewerInitialized = useRef(false);
@@ -329,46 +329,49 @@ const PdfViewer: React.FC = () => {
       WebViewer(
         {
           path: '/lib/webviewer',
-          licenseKey: 'demo:1747966151004:61fcaa7a03000000004eb811cb6510e62177a6ce7cd9ebf0e5b241b5d5',
+          licenseKey: 'demo:1748243908007:61f86d790300000000b53694e2aebb1c62c3d3148ee1cd8843885dbeb2',
           initialDoc: `${pdfData.url}`,
         },
         viewerRef.current!,
       ).then((instance) => {
         instanceRef.current = instance;
+        setInstance(instance);
 
         instance.Core.documentViewer.addEventListener('documentLoaded', () => {
           instance.UI.setZoomLevel(`${zoomLevel}%`);
         });
 
-        const { UI } = instance;
-        const { Feature } = UI;
-        console.log('UI: ', UI);
-        console.log('Feature: ', Feature);
-        UI.disableFeatures([Feature.Print, Feature.Download]);
-        
-        UI.disableElements([
-          'menuButton',
-          'leftPanelButton',
-          'view-controls-toggle-button',
-          'panToolButton',
-          'annotationEditToolButton',
-          'divider-0.1',
-          'divider-0.3',
-          'zoom-container',
-          'zoom-toggle-button',
-          'zoomOutButton',
-          'zoomOverlayButton',
-          'zoomInButton',
-          'groupedLeftHeaderButtons',
-          'toolbarGroup-View',
-          'toolbarGroup-Insert',
-          'searchPanelToggle',
-          'notesPanelToggle',
-          'toolbarGroup-Edit',
-          'toolbarGroup-FillAndSign',
-          'toolbarGroup-Forms',
-          'page-nav-floating-header',
-        ]);
+        const { annotationManager } = instance.Core;
+
+        annotationManager.addEventListener('annotationChanged', (annotations, action) => {
+          console.log('Whao: ', action);
+          if (action === 'add') {
+            console.log('this is a change that added annotations');
+          } else if (action === 'modify') {
+            console.log('this change modified annotations');
+          } else if (action === 'delete') {
+            console.log('there were annotations deleted');
+          }
+
+          annotations.forEach((annot: any) => {
+            console.log('annotation page number', annot.PageNumber);
+          });
+        });
+
+        annotationManager.addEventListener('annotationSelected', (annotations, action) => {
+          if (action === 'selected') {
+            console.log('annotation selection');
+            return <h1>Waoooooooooo</h1>;
+          } else if (action === 'deselected') {
+            console.log('annotation deselection');
+          }
+
+          console.log('annotation list', annotations);
+
+          if (annotations === null && action === 'deselected') {
+            console.log('all annotations deselected');
+          }
+        });
 
         webViewerInitialized.current = true;
       });
@@ -600,6 +603,48 @@ const PdfViewer: React.FC = () => {
                 borderRadius: '50%',
               }}
             />
+          </button>
+        </div>
+
+        {/* Shape/Anno Controls */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '50px',
+            right: '20px',
+            zIndex: 20, // Đảm bảo hiển thị trên nội dung khác
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            background: '#fff',
+            padding: '8px',
+            borderRadius: '10px',
+            boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+          }}
+        >
+          <button className={cx('annotation-button')} onClick={() => setShapeDropDown(!shapeDropDown)}>
+            <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M1.54286 2V12H16.4571V2H1.54286ZM0 1.97727C0 1.1614 0.680295 0.5 1.51948 0.5H16.4805C17.3197 0.5 18 1.1614 18 1.97727V12.0227C18 12.8386 17.3197 13.5 16.4805 13.5H1.51948C0.680295 13.5 0 12.8386 0 12.0227V1.97727Z"
+                fill="#1E1E1E"
+              />
+            </svg>
+            <span>Shape</span>
+          </button>
+          <Shape instance={instance} />
+          <span>|</span>
+          <button className={cx('annotation-button')} onClick={() => setTextDropDown(!textDropDown)}>
+            <svg width="20" height="16" viewBox="0 0 20 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M20 1.25V4.25C20 4.44891 19.921 4.63968 19.7803 4.78033C19.6397 4.92098 19.4489 5 19.25 5C19.0511 5 18.8603 4.92098 18.7197 4.78033C18.579 4.63968 18.5 4.44891 18.5 4.25V2H13.25V14H15.5C15.6989 14 15.8897 14.079 16.0303 14.2197C16.171 14.3603 16.25 14.5511 16.25 14.75C16.25 14.9489 16.171 15.1397 16.0303 15.2803C15.8897 15.421 15.6989 15.5 15.5 15.5H9.5C9.30109 15.5 9.11032 15.421 8.96967 15.2803C8.82902 15.1397 8.75 14.9489 8.75 14.75C8.75 14.5511 8.82902 14.3603 8.96967 14.2197C9.11032 14.079 9.30109 14 9.5 14H11.75V2H6.5V4.25C6.5 4.44891 6.42098 4.63968 6.28033 4.78033C6.13968 4.92098 5.94891 5 5.75 5C5.55109 5 5.36032 4.92098 5.21967 4.78033C5.07902 4.63968 5 4.44891 5 4.25V1.25C5 1.05109 5.07902 0.860322 5.21967 0.71967C5.36032 0.579018 5.55109 0.5 5.75 0.5H19.25C19.4489 0.5 19.6397 0.579018 19.7803 0.71967C19.921 0.860322 20 1.05109 20 1.25Z"
+                fill="#1E1E1E"
+              />
+              <path
+                d="M6 9.5C6 9.69891 5.92098 9.88968 5.78033 10.0303C5.63968 10.171 5.44891 10.25 5.25 10.25H3.75V11.75C3.75 11.9489 3.67098 12.1397 3.53033 12.2803C3.38968 12.421 3.19891 12.5 3 12.5C2.80109 12.5 2.61032 12.421 2.46967 12.2803C2.32902 12.1397 2.25 11.9489 2.25 11.75V10.25H0.75C0.551088 10.25 0.360323 10.171 0.21967 10.0303C0.079018 9.88968 0 9.69891 0 9.5C0 9.30109 0.079018 9.11032 0.21967 8.96967C0.360323 8.82902 0.551088 8.75 0.75 8.75H2.25V7.25C2.25 7.05109 2.32902 6.86032 2.46967 6.71967C2.61032 6.57902 2.80109 6.5 3 6.5C3.19891 6.5 3.38968 6.57902 3.53033 6.71967C3.67098 6.86032 3.75 7.05109 3.75 7.25V8.75H5.25C5.44891 8.75 5.63968 8.82902 5.78033 8.96967C5.92098 9.11032 6 9.30109 6 9.5Z"
+                fill="#1E1E1E"
+              />
+            </svg>
+            <span>Type</span>
           </button>
         </div>
       </div>

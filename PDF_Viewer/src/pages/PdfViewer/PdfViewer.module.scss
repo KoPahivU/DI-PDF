@@ -67,3 +67,17 @@
   justify-content: space-between;
   align-items: center;
 }
+
+.annotation-button {
+  display: flex;
+  gap: 7px;
+  padding: 7px 5px;
+  cursor: pointer;
+  background-color: white;
+  transition: background-color 0.2s ease;
+  border-radius: 5px;
+
+  &:hover {
+    background-color: #e0e0e0; // Màu xám nhạt
+  }
+}
