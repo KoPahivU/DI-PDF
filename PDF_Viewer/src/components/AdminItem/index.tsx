@@ -4,10 +4,13 @@ import classNames from 'classnames/bind';
 import { useAuth } from '../../layout/DashBoardLayout';
 import Cookies from 'js-cookie';
 import { UserItemInterface } from '../UserItem';
+import { useTranslation } from 'react-i18next';
 
 const cx = classNames.bind(styles);
 
 export function AdminItem({ ownerId }: { ownerId: string | undefined }) {
+  const { t } = useTranslation('components/owner');
+
   const profile = useAuth();
   const token = Cookies.get('DITokens');
   const [userData, setUserData] = useState<UserItemInterface | null>(null);
@@ -82,7 +85,7 @@ export function AdminItem({ ownerId }: { ownerId: string | undefined }) {
           fontWeight: '400',
         }}
       >
-        Doc Owner
+        {t('owner')}
       </h1>
     </div>
   );
