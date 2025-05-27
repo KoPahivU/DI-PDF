@@ -20,6 +20,8 @@ import NotFoundLayout from '../../layout/NotFoundLayout';
 import { NoPermission } from '../../components/NoPermission';
 import WebViewer, { WebViewerInstance } from '@pdftron/webviewer';
 import { Shape } from '~/components/DropDown/Shape';
+import { ShapePop } from '~/components/Popup/ShapePop';
+import { Text } from '~/components/DropDown/Text';
 
 const cx = classNames.bind(styles);
 
@@ -163,7 +165,6 @@ const PdfViewer: React.FC = () => {
   const [pdfData, setPdfData] = useState<PdfData | null>(null);
   const [fileStatus, setFileStatus] = useState<string>('');
   const [isOwner, setIsOwner] = useState<boolean>(false);
-  const [numPages, setNumPages] = useState<number>(0);
 
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
@@ -176,6 +177,10 @@ const PdfViewer: React.FC = () => {
 
   const [shapeDropDown, setShapeDropDown] = useState(true);
   const [textDropDown, setTextDropDown] = useState(true);
+  const [dropDown, setDropDown] = useState<string | null>(null);
+
+  const [selectedAnnot, setSelectedAnnot] = useState<any>(null);
+  const [popupPosition, setPopupPosition] = useState<{ x: number; y: number } | null>(null);
 
   const checkFileModified = useCallback(
     async (pdfId: string, cachedEntry: PdfCacheEntry) => {
@@ -310,10 +315,6 @@ const PdfViewer: React.FC = () => {
     };
   }, [pdfBlobUrl]);
 
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-  };
-
   const toggleDownload = async () => {
     if (!pdfData) return;
 
@@ -331,11 +332,15 @@ const PdfViewer: React.FC = () => {
           path: '/lib/webviewer',
           licenseKey: 'demo:1748243908007:61f86d790300000000b53694e2aebb1c62c3d3148ee1cd8843885dbeb2',
           initialDoc: `${pdfData.url}`,
+          disabledElements: ['annotationPopup', 'annotationStylePopup', 'contextMenuPopup'],
         },
         viewerRef.current!,
       ).then((instance) => {
         instanceRef.current = instance;
+
         setInstance(instance);
+
+        instance.UI.setToolMode('Pan');
 
         instance.Core.documentViewer.addEventListener('documentLoaded', () => {
           instance.UI.setZoomLevel(`${zoomLevel}%`);
@@ -344,7 +349,6 @@ const PdfViewer: React.FC = () => {
         const { annotationManager } = instance.Core;
 
         annotationManager.addEventListener('annotationChanged', (annotations, action) => {
-          console.log('Whao: ', action);
           if (action === 'add') {
             console.log('this is a change that added annotations');
           } else if (action === 'modify') {
@@ -359,11 +363,13 @@ const PdfViewer: React.FC = () => {
         });
 
         annotationManager.addEventListener('annotationSelected', (annotations, action) => {
-          if (action === 'selected') {
-            console.log('annotation selection');
-            return <h1>Waoooooooooo</h1>;
+          if (action === 'selected' && annotations.length > 0) {
+            console.log('Trigger selected');
+            const annot = annotations[0];
+            setSelectedAnnot(annot);
           } else if (action === 'deselected') {
             console.log('annotation deselection');
+            setSelectedAnnot(null);
           }
 
           console.log('annotation list', annotations);
@@ -376,7 +382,19 @@ const PdfViewer: React.FC = () => {
         webViewerInitialized.current = true;
       });
     }
-  }, [pdfData]);
+  }, [pdfData, zoomLevel]);
+
+  const handleMouseClick = (event: React.MouseEvent) => {
+    if (!viewerRef.current) return;
+
+    const rect = viewerRef.current.getBoundingClientRect();
+
+    // Tính vị trí chuột tương đối so với container cha
+    const relativeX = event.clientX - rect.left;
+    const relativeY = event.clientY - rect.top + 70;
+
+    setPopupPosition({ x: relativeX, y: relativeY });
+  };
 
   useEffect(() => {
     const viewerEl = viewerRef.current;
@@ -476,6 +494,8 @@ const PdfViewer: React.FC = () => {
     );
   }
 
+  console.log(dropDown);
+
   return (
     <div className={cx('wrapper')}>
       <div className={cx('header')}>
@@ -505,32 +525,6 @@ const PdfViewer: React.FC = () => {
           )}
         </div>
       </div>
-      {/* <div className={cx('pdf-section')}>
-        {pdfData ? (
-          <Document
-            file={pdfBlobUrl}
-            onLoadSuccess={onDocumentLoadSuccess}
-            loading={<Loading />}
-            options={{
-              cMapUrl: 'cmaps/',
-              cMapPacked: true,
-            }}
-          >
-            {Array.from(new Array(numPages), (_, index) => (
-              <Page
-                key={`page_${index + 1}`}
-                pageNumber={index + 1}
-                renderAnnotationLayer={true}
-                renderTextLayer={true}
-                scale={1.5}
-                className="mb-6"
-              />
-            ))}
-          </Document>
-        ) : (
-          <p>On Loading PDF...</p>
-        )}
-      </div> */}
       <div
         style={{
           position: 'relative',
@@ -553,6 +547,7 @@ const PdfViewer: React.FC = () => {
             flex: 1,
             overflowY: 'hidden',
           }}
+          onClick={handleMouseClick}
         >
           {/* Render PDF pages here */}
         </div>
@@ -622,7 +617,12 @@ const PdfViewer: React.FC = () => {
             boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
           }}
         >
-          <button className={cx('annotation-button')} onClick={() => setShapeDropDown(!shapeDropDown)}>
+          <button
+            className={cx('annotation-button', { choose: dropDown === 'shape' })}
+            onClick={() => {
+              setDropDown((prev) => (prev === 'shape' ? null : 'shape'));
+            }}
+          >
             <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
                 d="M1.54286 2V12H16.4571V2H1.54286ZM0 1.97727C0 1.1614 0.680295 0.5 1.51948 0.5H16.4805C17.3197 0.5 18 1.1614 18 1.97727V12.0227C18 12.8386 17.3197 13.5 16.4805 13.5H1.51948C0.680295 13.5 0 12.8386 0 12.0227V1.97727Z"
@@ -631,9 +631,18 @@ const PdfViewer: React.FC = () => {
             </svg>
             <span>Shape</span>
           </button>
-          <Shape instance={instance} />
+
           <span>|</span>
-          <button className={cx('annotation-button')} onClick={() => setTextDropDown(!textDropDown)}>
+
+          <button
+            className={cx('annotation-button', { choose: dropDown === 'text' })}
+            onClick={() => {
+              if (instance) {
+                setDropDown((prev) => (prev === 'text' ? null : 'text'));
+                instance.UI.setToolMode('AnnotationCreateFreeText');
+              }
+            }}
+          >
             <svg width="20" height="16" viewBox="0 0 20 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
                 d="M20 1.25V4.25C20 4.44891 19.921 4.63968 19.7803 4.78033C19.6397 4.92098 19.4489 5 19.25 5C19.0511 5 18.8603 4.92098 18.7197 4.78033C18.579 4.63968 18.5 4.44891 18.5 4.25V2H13.25V14H15.5C15.6989 14 15.8897 14.079 16.0303 14.2197C16.171 14.3603 16.25 14.5511 16.25 14.75C16.25 14.9489 16.171 15.1397 16.0303 15.2803C15.8897 15.421 15.6989 15.5 15.5 15.5H9.5C9.30109 15.5 9.11032 15.421 8.96967 15.2803C8.82902 15.1397 8.75 14.9489 8.75 14.75C8.75 14.5511 8.82902 14.3603 8.96967 14.2197C9.11032 14.079 9.30109 14 9.5 14H11.75V2H6.5V4.25C6.5 4.44891 6.42098 4.63968 6.28033 4.78033C6.13968 4.92098 5.94891 5 5.75 5C5.55109 5 5.36032 4.92098 5.21967 4.78033C5.07902 4.63968 5 4.44891 5 4.25V1.25C5 1.05109 5.07902 0.860322 5.21967 0.71967C5.36032 0.579018 5.55109 0.5 5.75 0.5H19.25C19.4489 0.5 19.6397 0.579018 19.7803 0.71967C19.921 0.860322 20 1.05109 20 1.25Z"
@@ -646,11 +655,27 @@ const PdfViewer: React.FC = () => {
             </svg>
             <span>Type</span>
           </button>
+          {dropDown === 'shape' && <Shape instance={instance} />}
+          {dropDown === 'text' && <Text instance={instance} />}
         </div>
       </div>
       {permissionPopup && (
         <PermissionBox access={pdfData?.access} setPermissionPopup={setPermissionPopup} pdfData={pdfData} />
-      )}{' '}
+      )}
+
+      {selectedAnnot && popupPosition && (
+        <div
+          style={{
+            position: 'absolute',
+            top: popupPosition.y,
+            left: popupPosition.x,
+            zIndex: 1001,
+            padding: '10px',
+          }}
+        >
+          <ShapePop instance={instance} selectedAnnot={selectedAnnot} />
+        </div>
+      )}
     </div>
   );
 };

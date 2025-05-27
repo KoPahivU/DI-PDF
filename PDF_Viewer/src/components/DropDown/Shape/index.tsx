@@ -5,7 +5,7 @@ import { WebViewerInstance } from '@pdftron/webviewer';
 
 const cx = classNames.bind(styles);
 
-const COLORS = [
+export const COLORS = [
   '#000000', // black
   '#E53935', // red
   '#4285F4', // blue
@@ -15,7 +15,7 @@ const COLORS = [
   '#FFFFFF', // white
 ];
 
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
+export function hexToRgb(hex: string): { r: number; g: number; b: number } {
   // Xoá dấu # nếu có
   hex = hex.replace(/^#/, '');
 
@@ -46,8 +46,6 @@ export function Shape({ instance }: { instance: WebViewerInstance | null }) {
   const [selectedFillColor, setSelectedFillColor] = useState<string>('#000000');
   const [selectedStrokeColor, setSelectedStrokeColor] = useState<string>('#000000');
   const [opacity, setOpacity] = useState<number>(50);
-
-  console.log('selectedShape', selectedShape);
 
   const handleSelectShape = (value: string) => {
     if (!instance) return;
