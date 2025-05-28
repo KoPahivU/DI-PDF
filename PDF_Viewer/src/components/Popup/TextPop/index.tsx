@@ -3,15 +3,21 @@ import styles from './TextPop.module.scss';
 import { WebViewerInstance } from '@pdftron/webviewer';
 import { useEffect, useState } from 'react';
 import { COLORS } from '~/components/DropDown/Shape';
+import { isSameColor, toPDFColor, toPlainColorObject } from '../ShapePop';
+import { useTranslation } from 'react-i18next';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTrashCan } from '@fortawesome/free-solid-svg-icons';
 
 const cx = classNames.bind(styles);
 
 export function TextPop({ instance, selectedAnnot }: { instance: WebViewerInstance | null; selectedAnnot: any }) {
+  const { t } = useTranslation('components/DropDown/Text');
+
   const [fontFamily, setFontFamily] = useState(selectedAnnot.Font);
   const [fontSize, setFontSize] = useState(selectedAnnot.FontSize);
-  const [selectedTextColor, setSelectedTextColor] = useState<Object>(selectedAnnot.TextColor);
-  const [selectedFillColor, setSelectedFillColor] = useState<Object>(selectedAnnot.FillColor);
-  const [selectedBorderColor, setSelectedBorderColor] = useState<Object>(selectedAnnot.StrokeColor);
+  const [selectedTextColor, setSelectedTextColor] = useState<Object>(toPlainColorObject(selectedAnnot.TextColor));
+  const [selectedFillColor, setSelectedFillColor] = useState<Object>(toPlainColorObject(selectedAnnot.FillColor));
+  const [selectedBorderColor, setSelectedBorderColor] = useState<Object>(toPlainColorObject(selectedAnnot.StrokeColor));
   const [borderWidth, setBorderWidth] = useState<number>(selectedAnnot.StrokeThickness);
   const [opacity, setOpacity] = useState<number>(selectedAnnot.Opacity * 100);
   const [selectedStyle, setSelectedStyle] = useState<'fill' | 'border'>('fill');
@@ -23,9 +29,9 @@ export function TextPop({ instance, selectedAnnot }: { instance: WebViewerInstan
 
     selectedAnnot.Font = fontFamily;
     selectedAnnot.FontSize = fontSize;
-    selectedAnnot.TextColor = selectedTextColor;
-    selectedAnnot.FillColor = selectedFillColor;
-    selectedAnnot.StrokeColor = selectedBorderColor;
+    selectedAnnot.TextColor = toPDFColor(instance, selectedTextColor);
+    selectedAnnot.FillColor = toPDFColor(instance, selectedFillColor);
+    selectedAnnot.StrokeColor = toPDFColor(instance, selectedBorderColor);
     selectedAnnot.StrokeThickness = borderWidth;
     selectedAnnot.Opacity = Number((opacity / 100).toFixed(2));
 
@@ -44,7 +50,7 @@ export function TextPop({ instance, selectedAnnot }: { instance: WebViewerInstan
 
   return (
     <div className={cx('wrapper')}>
-      <span>Text Style</span>
+      <span>{t('Text Style')}</span>
       {/* Font */}
       <div style={{ display: 'flex' }}>
         <div className={cx('input-group')} style={{ flex: '1' }}>
@@ -87,11 +93,11 @@ export function TextPop({ instance, selectedAnnot }: { instance: WebViewerInstan
       </div>
 
       <div className={cx('color-picker')}>
-        {COLORS.filter((color) => color.A === 0).map((color, index) => (
+        {COLORS.filter((color) => color.A !== 0).map((color, index) => (
           <div
             key={index}
             className={cx('color-dot', {
-              selected: selectedTextColor === color,
+              selected: isSameColor(selectedTextColor, color),
             })}
             onClick={() => setSelectedTextColor(color)}
           >
@@ -109,18 +115,19 @@ export function TextPop({ instance, selectedAnnot }: { instance: WebViewerInstan
       </div>
 
       {/* Frame */}
-      <span>Frame Style</span>
+      <span>{t('Frame Style')}</span>
       <div className={cx('style-container')}>
         <strong className={cx({ selected: selectedStyle === 'fill' })} onClick={() => setSelectedStyle('fill')}>
-          Fill
+          {t('Fill')}
         </strong>
         <strong className={cx({ selected: selectedStyle === 'border' })} onClick={() => setSelectedStyle('border')}>
-          Border line
+          {t('Border line')}
         </strong>
       </div>
       <div className={cx('color-picker')}>
         {COLORS.map((color, index) => {
-          const isSelected = selectedStyle === 'fill' ? selectedFillColor === color : selectedBorderColor === color;
+          const isSelected =
+            selectedStyle === 'fill' ? isSameColor(selectedFillColor, color) : isSameColor(selectedBorderColor, color);
 
           if (color.A === 0) {
             return (
@@ -187,7 +194,7 @@ export function TextPop({ instance, selectedAnnot }: { instance: WebViewerInstan
       )}
 
       {/* Opacity */}
-      <span>Opacity</span>
+      <span>{t('Opacity')}</span>
       <div className={cx('opacity-slider')}>
         <div className={cx('opacity-track')}>
           <div className={cx('checkerboard')} />
@@ -208,6 +215,25 @@ export function TextPop({ instance, selectedAnnot }: { instance: WebViewerInstan
           />
         </div>
         <span className={cx('opacity-value')}>{opacity} %</span>
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          borderTop: '2px solid #d9d9d9',
+          gap: '10px',
+          padding: '5px 10px',
+          color: '#E53935',
+          cursor: 'pointer',
+        }}
+        className={cx('delete-annot')}
+        onClick={() => {
+          if (instance && selectedAnnot) instance.Core.annotationManager.deleteAnnotation(selectedAnnot);
+        }}
+      >
+        <FontAwesomeIcon icon={faTrashCan} />
+        <span> {t('Delete')}</span>
       </div>
     </div>
   );

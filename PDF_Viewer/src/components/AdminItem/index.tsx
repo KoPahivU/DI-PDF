@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 const cx = classNames.bind(styles);
 
 export function AdminItem({ ownerId }: { ownerId: string | undefined }) {
-  const { t } = useTranslation('components/owner');
+  const { t } = useTranslation('components/AdminItem');
 
   const profile = useAuth();
   const token = Cookies.get('DITokens');
@@ -65,7 +65,7 @@ export function AdminItem({ ownerId }: { ownerId: string | undefined }) {
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <strong style={{ fontSize: '1.4rem', fontWeight: '600' }}>
           {userData?.fullName === undefined || userData.fullName === '' ? 'No Name' : userData.fullName}{' '}
-          {userData?.userId === profile?._id && '(You)'}
+          {userData?.userId === profile?._id && t('(You)')}
         </strong>
         <span style={{ fontSize: '1.2rem', color: '#7C7C7C' }}>
           {userData?.gmail === undefined || userData.gmail === '' ? 'N/A' : userData.gmail}

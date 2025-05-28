@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import styles from './DashBoard.module.scss';
 import classNames from 'classnames/bind';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowUpFromBracket } from '@fortawesome/free-solid-svg-icons';
+import { faArrowDown, faArrowUp, faArrowUpFromBracket } from '@fortawesome/free-solid-svg-icons';
 import { styled } from '@mui/material/styles';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -21,6 +21,7 @@ import { DocsEmpty } from '../../components/DocsEmpty';
 import { useAuth } from '../../layout/DashBoardLayout';
 import { GuestDashboard } from '../../components/GuestDashboard';
 import { UploadProcess } from '../../components/Popup/UploadProcess';
+import { useTranslation } from 'react-i18next';
 
 const cx = classNames.bind(styles);
 
@@ -55,6 +56,8 @@ interface fileData {
 }
 
 function DashBoard() {
+  const { t } = useTranslation('pages/DashBoard');
+
   const navigate = useNavigate();
   const profile = useAuth();
 
@@ -63,6 +66,8 @@ function DashBoard() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [isDesc, setIsDesc] = useState<boolean>(true); //Mặc định từ gần tới xa
 
   const [openPicker, authResponse] = useDrivePicker();
 
@@ -301,7 +306,14 @@ function DashBoard() {
   const getAllDocument = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch(`${process.env.REACT_APP_BE_URI}/recent-document?page=${currentPage}&limit=10`, {
+
+      const queryParams = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: '10',
+        isDesc: isDesc ? 'true' : 'false',
+      });
+
+      const res = await fetch(`${process.env.REACT_APP_BE_URI}/recent-document?${queryParams}`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -348,6 +360,22 @@ function DashBoard() {
     getAllDocument();
   }, [currentPage]);
 
+  const isFirstRender = useRef(true);
+  console.log(token);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return; // bỏ qua lần chạy đầu
+    }
+
+    setRows([]);
+    setTotalDocs(0);
+    setCurrentPage(1);
+    setPageCount(1);
+    getAllDocument();
+  }, [isDesc]);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -383,27 +411,29 @@ function DashBoard() {
       {/* Overlay hiển thị khi đang kéo file vào */}
       {isDragging && (
         <div className={cx('drag-overlay')}>
-          <p>Drag and drop PDF files here to upload</p>
+          <p>{t('Drag and drop PDF files here to upload')}</p>
         </div>
       )}
       {/* File header */}
       <div className={cx('header')}>
         <div className={cx('left-header')}>
-          <h1 className={cx('text-header')}>Recent Document</h1>
-          <span className={cx('total-docs')}>Total {totalDocs}</span>
+          <h1 className={cx('text-header')}>{t('Recent Document')}</h1>
+          <span className={cx('total-docs')}>
+            {t('Total')} {totalDocs}
+          </span>
         </div>
         <div className={cx('right-header')} onClick={toggleDropdown}>
           <FontAwesomeIcon className={cx('upload')} icon={faArrowUpFromBracket} />
-          Upload Document
+          {t('Upload Document')}
         </div>
 
         {dropdownOpen && (
           <div ref={dropdownRef} className={cx('upload-dropdown')}>
             <div className={cx('upload-option')} onClick={handleLocalClick}>
-              📁 From local file
+              📁 {t('From local file')}
             </div>
             <div className={cx('upload-option')} onClick={async () => await handleDriveClick()}>
-              ☁️ From Google Drive
+              ☁️ {t('From Google Drive')}
             </div>
           </div>
         )}
@@ -427,12 +457,18 @@ function DashBoard() {
             <Table sx={{ minWidth: 700 }} aria-label="customized table">
               <TableHead>
                 <TableRow>
-                  <StyledTableCell sx={{ width: '50%' }}>File name</StyledTableCell>
+                  <StyledTableCell sx={{ width: '50%' }}>{t('File name')}</StyledTableCell>
                   <StyledTableCell sx={{ width: '30%' }} align="left">
-                    Document Owner
+                    {t('Document Owner')}
                   </StyledTableCell>
-                  <StyledTableCell sx={{ width: '20%' }} align="center">
-                    Last Updated
+                  <StyledTableCell
+                    sx={{ width: '20%' }}
+                    align="center"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setIsDesc(!isDesc)}
+                  >
+                    {t('Last Updated')}
+                    <FontAwesomeIcon style={{ marginLeft: '5px' }} icon={isDesc ? faArrowUp : faArrowDown} />
                   </StyledTableCell>
                 </TableRow>
               </TableHead>
@@ -467,7 +503,7 @@ function DashBoard() {
                             }}
                           />
                           <span style={{ fontSize: '1.5rem' }}>
-                            {row.ownerName} {row.ownerId === profile?._id && '(You)'}
+                            {row.ownerName} {row.ownerId === profile?._id && t('(You)')}
                           </span>
                         </div>
                       </StyledTableCell>

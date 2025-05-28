@@ -1,13 +1,12 @@
 import { PdfFile } from './../pdf-files/schemas/pdf-file.schema';
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { CreateRecentDocumentDto } from './dto/create-recent-document.dto';
 import { UpdateRecentDocumentDto } from './dto/update-recent-document.dto';
 import { User } from '../user/schemas/user.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model, ObjectId, Types } from 'mongoose';
 import { RecentDocument } from './schemas/recent-document.schema';
 import { PdfFilesService } from '../pdf-files/pdf-files.service';
-import { PaginationDto } from '@/common/dto/pagination.dto';
+import { PaginationDto2 } from '@/common/dto/pagination2.dto';
 
 @Injectable()
 export class RecentDocumentService {
@@ -58,7 +57,7 @@ export class RecentDocumentService {
     return new Date(yyyy, MM - 1, dd, hh, mm, ss);
   }
 
-  async findAll(paginationDto: PaginationDto, userId: Types.ObjectId | string) {
+  async findAll(paginationDto: PaginationDto2, userId: Types.ObjectId | string) {
     const { page = 1, limit = 10 } = paginationDto;
     const skip = (page - 1) * limit;
 
@@ -67,11 +66,10 @@ export class RecentDocumentService {
 
     const allDocs = await this.recentDocumentModel.find({ userId });
 
-    // Sắp xếp thủ công theo thời gian thực
-    const sortedDocs = allDocs.sort((a, b) => {
+    const sortedDocs = [...allDocs].sort((a, b) => {
       const dateA = this.parseCustomDate(a.date);
       const dateB = this.parseCustomDate(b.date);
-      return dateB.getTime() - dateA.getTime(); // Mới nhất trước
+      return paginationDto.isDesc === 'true' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
     });
 
     const paginatedDocs = sortedDocs.slice(skip, skip + limit);

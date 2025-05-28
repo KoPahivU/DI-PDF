@@ -3,6 +3,7 @@ import styles from './Text.module.scss';
 import { Core, WebViewerInstance } from '@pdftron/webviewer';
 import { COLORS } from '../Shape';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const cx = classNames.bind(styles);
 
@@ -15,6 +16,8 @@ export function toColorObject(
 }
 
 export function Text({ instance }: { instance: WebViewerInstance | null }) {
+  const { t } = useTranslation('components/DropDown/Text');
+
   const [fontFamily, setFontFamily] = useState('Helvetica');
   const [fontSize, setFontSize] = useState(12);
   const [selectedTextColor, setSelectedTextColor] = useState<Object>(COLORS[1]);
@@ -44,7 +47,7 @@ export function Text({ instance }: { instance: WebViewerInstance | null }) {
 
   return (
     <div className={cx('wrapper')}>
-      <span>Text Style</span>
+      <span>{t('Text Style')}</span>
       {/* Font */}
       <div style={{ display: 'flex' }}>
         <div className={cx('input-group')} style={{ flex: '1' }}>
@@ -109,13 +112,13 @@ export function Text({ instance }: { instance: WebViewerInstance | null }) {
       </div>
 
       {/* Frame */}
-      <span>Frame Style</span>
+      <span> {t('Frame Style')}</span>
       <div className={cx('style-container')}>
         <strong className={cx({ selected: selectedStyle === 'fill' })} onClick={() => setSelectedStyle('fill')}>
-          Fill
+          {t('Fill')}
         </strong>
         <strong className={cx({ selected: selectedStyle === 'border' })} onClick={() => setSelectedStyle('border')}>
-          Border line
+          {t('Border line')}
         </strong>
       </div>
       <div className={cx('color-picker')}>
@@ -187,7 +190,7 @@ export function Text({ instance }: { instance: WebViewerInstance | null }) {
       )}
 
       {/* Opacity */}
-      <span>Opacity</span>
+      <span>{t('Opacity')}</span>
       <div className={cx('opacity-slider')}>
         <div className={cx('opacity-track')}>
           <div className={cx('checkerboard')} />

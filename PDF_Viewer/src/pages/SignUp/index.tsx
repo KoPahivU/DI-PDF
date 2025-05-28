@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import styles from './SignUp.module.scss';
 import classNames from 'classnames/bind';
 import Cookies from 'js-cookie';
+import { useTranslation } from 'react-i18next';
 
 const cx = classNames.bind(styles);
 
@@ -22,6 +23,8 @@ function isValidPassword(password: string) {
 }
 
 function SignUp() {
+  const { t } = useTranslation('pages/SignUp');
+
   const navigate = useNavigate();
   const token = Cookies.get('DITokens');
   if (token) navigate('/');
@@ -57,31 +60,29 @@ function SignUp() {
 
   const handleSignUp = async () => {
     if (refs.email.current?.value === '') {
-      setEmailField('Mandatory field');
+      setEmailField(t('Mandatory field'));
       setWrongEmailInput(true);
     } else if (!emailRegex.test(refs.email.current?.value || '')) {
-      setEmailField('Wrong format');
+      setEmailField(t('Wrong format'));
       setWrongEmailInput(true);
     } else {
       setWrongEmailInput(false);
     }
 
     if (refs.fullName.current?.value === '') {
-      setFullNameField('Mandatory field');
+      setFullNameField(t('Mandatory field'));
       setWrongFullNameInput(true);
     } else setWrongFullNameInput(false);
 
     if (!isValidPassword(refs.password.current?.value || '')) {
-      setPasswordField('Password must be 8+ chars with upper, lower, number & symbol.');
+      setPasswordField(t('Password must be 8+ chars with upper, lower, number & symbol.'));
       setWrongPasswordInput(true);
     } else setWrongPasswordInput(false);
 
     if (refs.reTypePassword.current?.value !== refs.password.current?.value) {
-      setReTypePasswordField('Passwords do not match');
+      setReTypePasswordField(t('Passwords do not match'));
       setWrongReTypePasswordInput(true);
     } else setWrongReTypePasswordInput(false);
-
-    console.log(!wrongEmailInput && !wrongFullNameInput && !wrongPasswordInput && !wrongReTypePasswordInput);
 
     if (!wrongEmailInput && !wrongFullNameInput && !wrongPasswordInput && !wrongReTypePasswordInput) {
       setIsLoading(true);
@@ -103,8 +104,7 @@ function SignUp() {
           console.log('Error Response:', errorData);
 
           if (errorData.message === 'Gmail has been used.') {
-            console.log('Hehe');
-            setEmailField(errorData.message);
+            setEmailField(t('Gmail has been used.'));
             setWrongEmailInput(true);
             return;
           }
@@ -177,7 +177,7 @@ function SignUp() {
       <div className={cx('form')}>
         <div className={cx('form-header')}>
           <img className={cx('header-logo')} src={logo} alt="Logo" />
-          <h1 className={cx('sign-header')}>Sign Up</h1>
+          <h1 className={cx('sign-header')}>{t('Sign Up')}</h1>
         </div>
 
         <a
@@ -190,12 +190,12 @@ function SignUp() {
             src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
             alt="Google Logo"
           />
-          <h1 className={cx('google-text')}>Continue with Google</h1>
+          <h1 className={cx('google-text')}>{t('Continue with Google')}</h1>
         </a>
 
         <div className={cx('separator')}>
           <span className={cx('line')}></span>
-          <span className={cx('or-text')}>or</span>
+          <span className={cx('or-text')}>{t('or')}</span>
           <span className={cx('line')}></span>
         </div>
 
@@ -207,7 +207,7 @@ function SignUp() {
 
         <div className={cx('container')}>
           <div className={cx('describe')}>
-            <h1 className={cx('text')}>Full Name</h1>
+            <h1 className={cx('text')}>{t('Full name')}</h1>
             <h1 className={cx('symbol')}>*</h1>
           </div>
           <input
@@ -233,7 +233,7 @@ function SignUp() {
 
         <div className={cx('container')}>
           <div className={cx('describe')}>
-            <h1 className={cx('text')}>Password</h1>
+            <h1 className={cx('text')}>{t('Password')}</h1>
             <h1 className={cx('symbol')}>*</h1>
           </div>
           <div className={cx('input', { 'input-error': wrongPasswordInput })}>
@@ -256,13 +256,13 @@ function SignUp() {
 
         <div className={cx('container')}>
           <div className={cx('describe')}>
-            <h1 className={cx('text')}>Re-confirm Password</h1>
+            <h1 className={cx('text')}>{t('Re-confirm Password')}</h1>
             <h1 className={cx('symbol')}>*</h1>
           </div>
           <div className={cx('input', { 'input-error': wrongReTypePasswordInput })}>
             <input
               ref={refs.reTypePassword}
-              placeholder="Re-confirm Password"
+              placeholder={t('Re-confirm Password')}
               className={cx('input-password')}
               type={reTypePasswordVisbility ? 'text' : 'password'}
             />
@@ -279,10 +279,10 @@ function SignUp() {
 
         <div className={cx('accept-box')} onClick={() => setAcceptStatus(!acceptStatus)}>
           <FontAwesomeIcon icon={acceptStatus ? faSquareCheck : faSquare} className={cx('checkbox')} />
-          <h1>I accept all</h1>
-          <h2 className={cx('bold')}>Terms of Service</h2>
-          <h1>and</h1>
-          <h2 className={cx('bold')}>Privacy Policy</h2>
+          <h1>{t('I accept all')}</h1>
+          <h2 className={cx('bold')}>{t('Terms of Service')}</h2>
+          <h1>{t('and')}</h1>
+          <h2 className={cx('bold')}>{t('Privacy Policy')}</h2>
         </div>
 
         <div
@@ -291,13 +291,13 @@ function SignUp() {
             if (acceptStatus) await handleSignUp();
           }}
         >
-          Sign Up
+          {t('Sign Up')}
         </div>
 
         <div className={cx('form-footer')}>
-          <h2 className={cx('describe')}>Already have an account?</h2>
+          <h2 className={cx('describe')}>{t('Already have an account?')}</h2>
           <h1 className={cx('button')} onClick={() => navigate('/auth/signin')}>
-            Sign In
+            {t('Sign In')}
           </h1>
         </div>
       </div>
@@ -305,7 +305,7 @@ function SignUp() {
       {isLoading && (
         <div className={cx('loading-overlay')}>
           <div className={cx('spinner')}></div>
-          <p>Loading...</p>
+          <p>{t('Loading')}...</p>
         </div>
       )}
 
@@ -314,23 +314,23 @@ function SignUp() {
           <div className={cx('success-popup')}>
             <FontAwesomeIcon icon={faXmark} className={cx('exit')} onClick={() => setSuccessPopup(false)} />
             <img className={cx('image')} src={email} alt="pic" />
-            <h2>Verify your email address</h2>
+            <h2>{t('Verify your email address')}</h2>
 
             <div className={cx('email-text')}>
               <p>
-                We’ve just sent a verification email to <strong>{refs?.email?.current?.value}</strong>. Please check
-                your inbox
+                {t('We’ve just sent a verification email to')} <strong>{refs?.email?.current?.value}</strong>.{' '}
+                {t('Please check your inbox')}.
               </p>
             </div>
             <div className={cx('resend')}>
-              <p>Didn't receive an email? </p>
+              <p>{t(`Didn't receive an email?`)} </p>
               <strong
                 className={cx('link')}
                 onClick={() => {
                   handleResendGmail();
                 }}
               >
-                Resend verification link.
+                {t('Resend verification link.')}
               </strong>
             </div>
           </div>

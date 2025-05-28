@@ -11,6 +11,7 @@ import Cookies from 'js-cookie';
 import { PermissionSuccess } from '../Popup/PermissionSuccess';
 import { PermissionError } from '../Popup/PermissionError';
 import { PermissionOnProcess } from '../Popup/PermissionOnProcess';
+import { useTranslation } from 'react-i18next';
 
 const cx = classNames.bind(styles);
 
@@ -23,6 +24,8 @@ export function PermissionBox({
   setPermissionPopup: Function;
   pdfData: PdfData | null;
 }) {
+  const { t } = useTranslation('components/PermissionBox');
+
   const token = Cookies.get('DITokens');
   console.log('pdf: ', pdfData);
   const [isPublic, setIsPublic] = useState<boolean>(pdfData?.isPublic || false);
@@ -85,8 +88,6 @@ export function PermissionBox({
     }
   };
 
-  console.log(sharedUser);
-
   const postUserPermission = async () => {
     try {
       if (sharedUser && sharedUser.length > 0) {
@@ -132,6 +133,7 @@ export function PermissionBox({
         setSaveSuccess(true);
         setTimeout(() => {
           setSaveSuccess(false);
+          setPermissionPopup(false);
         }, 1000);
       }
     } catch (error) {
@@ -144,7 +146,7 @@ export function PermissionBox({
       <div className={cx('modal')}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <h1 style={{ fontSize: '2.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            Share '{pdfData?.fileName}'
+            {t('Share')} '{pdfData?.fileName}'
           </h1>
           <FontAwesomeIcon icon={faXmark} className={cx('exit')} onClick={() => setPermissionPopup(false)} />
         </div>
@@ -163,15 +165,15 @@ export function PermissionBox({
 
         {isPublic && linkResponsed && (
           <div style={{ fontSize: '1.7rem', fontWeight: '600' }}>
-            Public Access
+            {t('Public Access')}
             <div
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
               className={cx('link-container')}
             >
               <div>
-                <h1 style={{ fontSize: '1.4rem', fontWeight: '500' }}>Editor shared link</h1>
+                <h1 style={{ fontSize: '1.4rem', fontWeight: '500' }}>{t('Editor shared link')}</h1>
                 <h1 style={{ fontSize: '1.2rem', fontWeight: '400' }}>
-                  Anyone with an Internet connection and this link can edit it.
+                  {t('Anyone with an Internet connection and this link can edit it.')}
                 </h1>
               </div>
               <FontAwesomeIcon
@@ -195,9 +197,9 @@ export function PermissionBox({
               className={cx('link-container')}
             >
               <div>
-                <h1 style={{ fontSize: '1.4rem', fontWeight: '500' }}>Viewer shared link</h1>
+                <h1 style={{ fontSize: '1.4rem', fontWeight: '500' }}>{t('Viewer shared link')}</h1>
                 <h1 style={{ fontSize: '1.2rem', fontWeight: '400' }}>
-                  Anyone with an Internet connection and this link can view it.
+                  {t('Anyone with an Internet connection and this link can view it.')}
                 </h1>
               </div>
               <FontAwesomeIcon
@@ -232,7 +234,7 @@ export function PermissionBox({
             <FontAwesomeIcon icon={faChevronDown} style={{ marginLeft: 'auto' }} />
           </div>
           <div className={cx('save')} onClick={postUserPermission}>
-            Save
+            {t('Save')}
           </div>
           {showDropdown && (
             <div className={cx('dropdown-options')}>
@@ -243,7 +245,7 @@ export function PermissionBox({
                 }}
               >
                 <FontAwesomeIcon icon={faGlobe} style={{ marginRight: '8px', color: '#79c0da' }} />
-                Public
+                {t('Public')}
               </div>
               <div
                 className={cx('option')}
@@ -252,7 +254,7 @@ export function PermissionBox({
                 }}
               >
                 <FontAwesomeIcon icon={faLock} style={{ marginRight: '8px', color: '#900b09' }} />
-                Private
+                {t('Private')}
               </div>
             </div>
           )}

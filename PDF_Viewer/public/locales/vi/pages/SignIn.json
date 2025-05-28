@@ -1,0 +1,15 @@
+{
+  "Mandatory field": "Trường bắt buộc",
+  "Wrong format": "Định dạng sai",
+  "Gmail has been used.": "Gmail đã được sử dụng.",
+  "Account isn't active yet.": "Tài khoản chưa được kích hoạt.",
+  "Sign In": "Đăng nhập",
+  "Continue with Google": "Tiếp tục với Google",
+  "or": "hoặc",
+  "This email address is currently being used with email & password. Please sign in with email & password": "Địa chỉ email này hiện đang được sử dụng với email và mật khẩu. Vui lòng đăng nhập bằng email và mật khẩu",
+  "This email address is associated with a Google account. Please sign in using Google Sign-In.": "Địa chỉ email này được liên kết với tài khoản Google. Vui lòng đăng nhập bằng Google.",
+  "Password": "Mật khẩu",
+  "Do not have an account?": "Bạn không có tài khoản?",
+  "Sign Up": "Đăng ký",
+  "Loading": "Đang tải"
+}

@@ -5,14 +5,35 @@ import { faTrashCan } from '@fortawesome/free-regular-svg-icons';
 import { COLORS } from '~/components/DropDown/Shape';
 import classNames from 'classnames/bind';
 import styles from './ShapePop.module.scss';
+import { useTranslation } from 'react-i18next';
 
 const cx = classNames.bind(styles);
 
+export const toPDFColor = (instance: WebViewerInstance | null, colorObj: any) => {
+  if (instance) return new instance.Core.Annotations.Color(colorObj.R, colorObj.G, colorObj.B, colorObj.A);
+};
+
+export const toPlainColorObject = (color: any) => {
+  console.log('toPlainColorObject', color);
+  return {
+    R: color?.R ?? 0,
+    G: color?.G ?? 0,
+    B: color?.B ?? 0,
+    A: color?.A ?? 1,
+  };
+};
+
+export const isSameColor = (c1: any, c2: any) => {
+  return c1?.R === c2?.R && c1?.G === c2?.G && c1?.B === c2?.B && c1?.A === c2?.A;
+};
+
 export function ShapePop({ instance, selectedAnnot }: { instance: WebViewerInstance | null; selectedAnnot: any }) {
+  const { t } = useTranslation('components/DropDown/Shape');
+
   const [selectedStyle, setSelectedStyle] = useState<'fill' | 'stroke'>('fill');
   const [strokeWidth, setStrokeWidth] = useState<number>(selectedAnnot.StrokeThickness);
-  const [selectedFillColor, setSelectedFillColor] = useState<Object>(selectedAnnot.FillColor);
-  const [selectedStrokeColor, setSelectedStrokeColor] = useState<Object>(selectedAnnot.StrokeColor);
+  const [selectedFillColor, setSelectedFillColor] = useState<Object>(toPlainColorObject(selectedAnnot.FillColor));
+  const [selectedStrokeColor, setSelectedStrokeColor] = useState<Object>(toPlainColorObject(selectedAnnot.StrokeColor));
   const [opacity, setOpacity] = useState<number>(selectedAnnot.Opacity * 100);
 
   useEffect(() => {
@@ -20,25 +41,25 @@ export function ShapePop({ instance, selectedAnnot }: { instance: WebViewerInsta
 
     const { annotationManager } = instance.Core;
 
-    selectedAnnot.StrokeColor = selectedStrokeColor;
-
-    selectedAnnot.FillColor = selectedFillColor;
-
+    selectedAnnot.StrokeColor = toPDFColor(instance, selectedStrokeColor);
+    selectedAnnot.FillColor = toPDFColor(instance, selectedFillColor);
     selectedAnnot.Opacity = Number((opacity / 100).toFixed(2));
     selectedAnnot.StrokeThickness = strokeWidth;
 
     annotationManager.redrawAnnotation(selectedAnnot);
+    annotationManager.trigger('annotationChanged', [[selectedAnnot], 'modify', {}]);
+    annotationManager.updateAnnotation(selectedAnnot);
   }, [opacity, strokeWidth, selectedFillColor, selectedStrokeColor, instance, selectedAnnot]);
 
   return (
     <div className={cx('wrapper')}>
-      <span style={{ paddingTop: '10px' }}>Style</span>
+      <span style={{ paddingTop: '10px' }}>{t('style')}</span>
       <div className={cx('style-container')}>
         <strong className={cx({ selected: selectedStyle === 'fill' })} onClick={() => setSelectedStyle('fill')}>
-          Fill
+          {t('fill')}
         </strong>
         <strong className={cx({ selected: selectedStyle === 'stroke' })} onClick={() => setSelectedStyle('stroke')}>
-          Stroke
+          {t('stroke')}
         </strong>
       </div>
 
@@ -67,7 +88,8 @@ export function ShapePop({ instance, selectedAnnot }: { instance: WebViewerInsta
 
       <div className={cx('color-picker')}>
         {COLORS.map((color, index) => {
-          const isSelected = selectedStyle === 'fill' ? selectedFillColor === color : selectedStrokeColor === color;
+          const isSelected =
+            selectedStyle === 'fill' ? isSameColor(selectedFillColor, color) : isSameColor(selectedStrokeColor, color);
 
           if (color.A === 0) {
             return (
@@ -106,7 +128,7 @@ export function ShapePop({ instance, selectedAnnot }: { instance: WebViewerInsta
         })}
       </div>
 
-      <span>Opacity</span>
+      <span>{t('opacity')}</span>
       <div className={cx('opacity-slider')}>
         <div className={cx('opacity-track')}>
           <div className={cx('checkerboard')} />
@@ -144,7 +166,7 @@ export function ShapePop({ instance, selectedAnnot }: { instance: WebViewerInsta
         }}
       >
         <FontAwesomeIcon icon={faTrashCan} />
-        <span>Delete</span>
+        <span> {t('Delete')}</span>
       </div>
     </div>
   );

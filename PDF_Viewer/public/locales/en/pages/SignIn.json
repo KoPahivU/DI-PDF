@@ -1,0 +1,15 @@
+{
+  "Mandatory field": "Mandatory field",
+  "Wrong format": "Wrong format",
+  "Gmail has been used.": "Gmail has been used.",
+  "Account isn't active yet.": "Account isn't active yet.",
+  "Sign In": "Sign In",
+  "Continue with Google": "Continue with Google",
+  "or": "or",
+  "This email address is currently being used with email & password. Please sign in with email & password": "This email address is currently being used with email & password. Please sign in with email & password",
+  "This email address is associated with a Google account. Please sign in using Google Sign-In.": "This email address is associated with a Google account. Please sign in using Google Sign-In.",
+  "Password": "Password",
+  "Do not have an account?": "Do not have an account?",
+  "Sign Up": "Sign Up",
+  "Loading": "Loading"
+}

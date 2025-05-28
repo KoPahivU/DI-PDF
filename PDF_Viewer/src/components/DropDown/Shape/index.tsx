@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { WebViewerInstance } from '@pdftron/webviewer';
 import classNames from 'classnames/bind';
 import styles from './Shape.module.scss';
+import { useTranslation } from 'react-i18next';
 
 const cx = classNames.bind(styles);
 
@@ -35,6 +36,8 @@ const handleChooseColor = (
 };
 
 export function Shape({ instance }: { instance: WebViewerInstance | null }) {
+  const { t } = useTranslation('components/DropDown/Shape');
+
   const [selectedStyle, setSelectedStyle] = useState<'fill' | 'stroke'>('fill');
   const [selectedShape, setSelectedShape] = useState<string | null>(null);
   const [strokeWidth, setStrokeWidth] = useState<number>(5);
@@ -58,7 +61,7 @@ export function Shape({ instance }: { instance: WebViewerInstance | null }) {
 
   return (
     <div className={cx('wrapper')}>
-      <span>Shape</span>
+      <span> {t('shape')}</span>
       <div className={cx('shape-container')}>
         {/* Rectangle */}
         <div
@@ -157,13 +160,13 @@ export function Shape({ instance }: { instance: WebViewerInstance | null }) {
         </div>
       </div>
 
-      <span>Style</span>
+      <span>{t('style')}</span>
       <div className={cx('style-container')}>
         <strong className={cx({ selected: selectedStyle === 'fill' })} onClick={() => setSelectedStyle('fill')}>
-          Fill
+          {t('fill')}
         </strong>
         <strong className={cx({ selected: selectedStyle === 'stroke' })} onClick={() => setSelectedStyle('stroke')}>
-          Stroke
+          {t('stroke')}
         </strong>
       </div>
 
@@ -231,7 +234,7 @@ export function Shape({ instance }: { instance: WebViewerInstance | null }) {
         })}
       </div>
 
-      <span>Opacity</span>
+      <span>{t('opacity')}</span>
       <div className={cx('opacity-slider')}>
         <div className={cx('opacity-track')}>
           <div className={cx('checkerboard')} />

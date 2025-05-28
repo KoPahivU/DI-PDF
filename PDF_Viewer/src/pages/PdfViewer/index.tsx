@@ -25,6 +25,7 @@ import { Text } from '~/components/DropDown/Text';
 import { TextPop } from '~/components/Popup/TextPop';
 import { OnSave } from '~/components/Popup/OnSave';
 import { RequireHigherPermission } from '~/components/DropDown/RequireHigherPermission';
+import { useTranslation } from 'react-i18next';
 
 const cx = classNames.bind(styles);
 
@@ -156,6 +157,8 @@ const getCachedPdf = (pdfId: string): PdfCacheEntry | null => {
 const ZOOM_LEVELS = [50, 75, 90, 100, 125, 150, 200];
 
 const PdfViewer: React.FC = () => {
+  const { t } = useTranslation('pages/PdfViewer');
+
   const token = Cookies.get('DITokens');
   const navigate = useNavigate();
   const profile = useAuth();
@@ -271,7 +274,7 @@ const PdfViewer: React.FC = () => {
         }
 
         const responseData = await res.json();
-        // console.log('responseData: ', responseData);
+        console.log('responseData: ', responseData);
         const newPdfData: PdfData = {
           _id: responseData.data.file._id,
           url: responseData.data.file.storagePath,
@@ -283,13 +286,18 @@ const PdfViewer: React.FC = () => {
           isPublic: responseData.data.file.isPublic,
           updatedAt: responseData.data.file.updatedAt,
         };
-        setXfdf(responseData.data.annotation.xfdf);
+
+        console.log(responseData);
+
+        // setXfdf(responseData.data.annotation.xfdf);
 
         // Cache file mới với ETag và Last-Modified
         const etag = res.headers.get('ETag');
         const lastModified = res.headers.get('Last-Modified') || newPdfData.updatedAt;
 
         const blobUrl = await cachePdfFile(pdfId, newPdfData, etag || undefined, lastModified || undefined);
+
+        console.log('Hehee');
 
         setPdfData(newPdfData);
         setPdfBlobUrl(blobUrl);
@@ -405,8 +413,7 @@ const PdfViewer: React.FC = () => {
         instance.UI.setToolMode('Pan');
 
         Object.values(instance.UI.hotkeys.Keys).forEach((key) => {
-          console.log('key:', key);
-          if (key === 'p' || key === 'ctrl+z') {
+          if (key === 'p' || key === 'ctrl+z' || key === 'escape') {
             return;
           }
           instance.UI.hotkeys.off(key as string);
@@ -590,16 +597,16 @@ const PdfViewer: React.FC = () => {
         <div className={cx('right-header')}>
           <button className={cx('button')} onClick={refreshPdf} disabled={isRefreshing}>
             <FontAwesomeIcon icon={faSync} spin={isRefreshing} style={{ marginRight: '10px' }} />
-            Refresh
+            {t('Refresh')}
           </button>
           <button className={cx('button')} onClick={toggleDownload}>
             <FontAwesomeIcon style={{ marginRight: '10px' }} icon={faDownload} />
-            Download
+            {t('Download')}
           </button>
           {isOwner && (
             <button className={cx('button')} onClick={() => setPermissionPopup(true)}>
               <FontAwesomeIcon style={{ marginRight: '10px' }} icon={faArrowUpFromBracket} />
-              Share
+              {t('Share')}
             </button>
           )}
         </div>
@@ -709,7 +716,7 @@ const PdfViewer: React.FC = () => {
                   fill="#1E1E1E"
                 />
               </svg>
-              <span>Shape</span>
+              <span>{t('Shape')}</span>
             </button>
 
             <span>|</span>
@@ -733,7 +740,7 @@ const PdfViewer: React.FC = () => {
                   fill="#1E1E1E"
                 />
               </svg>
-              <span>Type</span>
+              <span>{t('Type')}</span>
             </button>
             {dropDown === 'shape' && <Shape instance={instance} />}
             {dropDown === 'text' && <Text instance={instance} />}

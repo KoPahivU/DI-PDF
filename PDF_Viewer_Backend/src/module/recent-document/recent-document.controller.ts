@@ -3,7 +3,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Request } fro
 import { RecentDocumentService } from './recent-document.service';
 import { CreateRecentDocumentDto } from './dto/create-recent-document.dto';
 import { UpdateRecentDocumentDto } from './dto/update-recent-document.dto';
-import { PaginationDto } from '@/common/dto/pagination.dto';
+import { PaginationDto2 } from '@/common/dto/pagination2.dto';
 
 @Controller('recent-document')
 export class RecentDocumentController {
@@ -15,7 +15,7 @@ export class RecentDocumentController {
   }
 
   @Get()
-  findAll(@Query() page: PaginationDto, @Request() req) {
+  findAll(@Query() page: PaginationDto2, @Request() req) {
     return this.recentDocumentService.findAll(page, req?.user?._id);
   }
 

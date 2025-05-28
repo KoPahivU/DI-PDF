@@ -5,7 +5,16 @@ meta {
 }
 
 post {
-  url: 
-  body: none
-  auth: inherit
+  url: {{baseUrl}}/annotations
+  body: formUrlEncoded
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImhvYW5nbGUyOTN2dUBnbWFpbC5jb20iLCJzdWIiOiI2ODI1OTZmNGQ2MmFhY2Y5MjdlNDI0ZWIiLCJpYXQiOjE3NDgzOTcxNjgsImV4cCI6MTc1MDk4OTE2OH0.kAMPTDreoLWJvZW6VpniZ9ivMv2e_BynQyBVhXQt_EI
+}
+
+body:form-urlencoded {
+  pdfId: 68367a0713842e68ca60779f
+  xfdf: hehe
 }

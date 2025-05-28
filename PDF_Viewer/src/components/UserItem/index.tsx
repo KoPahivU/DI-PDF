@@ -4,6 +4,7 @@ import classNames from 'classnames/bind';
 import { useAuth } from '../../layout/DashBoardLayout';
 import { SharedUser } from '../../pages/PdfViewer';
 import Cookies from 'js-cookie';
+import { useTranslation } from 'react-i18next';
 
 const cx = classNames.bind(styles);
 
@@ -16,6 +17,8 @@ export interface UserItemInterface {
 }
 
 export function UserItem({ sharedUser, setSharedUser }: { sharedUser: SharedUser | null; setSharedUser: Function }) {
+  const { t } = useTranslation('components/UserItem');
+
   const profile = useAuth();
   const token = Cookies.get('DITokens');
   const [access, setAccess] = useState(sharedUser?.access || 'View');
@@ -92,7 +95,7 @@ export function UserItem({ sharedUser, setSharedUser }: { sharedUser: SharedUser
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <strong style={{ fontSize: '1.4rem', fontWeight: '600' }}>
           {userData?.fullName === undefined || userData.fullName === '' ? 'No Name' : userData.fullName}{' '}
-          {userData?.userId === profile?._id && '(You)'}
+          {userData?.userId === profile?._id && t('(You)')}
         </strong>
         <span style={{ fontSize: '1.2rem', color: '#7C7C7C' }}>
           {userData?.gmail === undefined || userData.gmail === '' ? 'N/A' : userData.gmail}
@@ -111,9 +114,9 @@ export function UserItem({ sharedUser, setSharedUser }: { sharedUser: SharedUser
           border: '0px solid #FFFFFF',
         }}
       >
-        <option value="Edit">Edit</option>
-        <option value="View">View</option>
-        <option value="Remove">Remove</option>
+        <option value="Edit">{t('Edit')}</option>
+        <option value="View">{t('View')}</option>
+        <option value="Remove">{t('Remove')}</option>
       </select>
     </div>
   );
