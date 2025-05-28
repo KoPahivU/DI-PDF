@@ -12,6 +12,7 @@ import { CloudinaryModule } from './common/cloudinary/cloudinary.module';
 import { AuthModule } from './auth/auth.module';
 import { PdfFilesModule } from './module/pdf-files/pdf-files.module';
 import { RecentDocumentModule } from './module/recent-document/recent-document.module';
+import { AnnotationsModule } from './module/annotations/annotations.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { RecentDocumentModule } from './module/recent-document/recent-document.m
     CloudinaryModule,
     PdfFilesModule,
     RecentDocumentModule,
+    AnnotationsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,7 +1,7 @@
-import classNames from 'classnames/bind';
-import styles from './Shape.module.scss';
 import { useEffect, useState } from 'react';
 import { WebViewerInstance } from '@pdftron/webviewer';
+import classNames from 'classnames/bind';
+import styles from './Shape.module.scss';
 
 const cx = classNames.bind(styles);
 
@@ -37,10 +37,10 @@ const handleChooseColor = (
 export function Shape({ instance }: { instance: WebViewerInstance | null }) {
   const [selectedStyle, setSelectedStyle] = useState<'fill' | 'stroke'>('fill');
   const [selectedShape, setSelectedShape] = useState<string | null>(null);
-  const [strokeWidth, setStrokeWidth] = useState<number>(1);
+  const [strokeWidth, setStrokeWidth] = useState<number>(5);
   const [selectedFillColor, setSelectedFillColor] = useState<Object>(COLORS[0]);
-  const [selectedStrokeColor, setSelectedStrokeColor] = useState<Object>(COLORS[0]);
-  const [opacity, setOpacity] = useState<number>(50);
+  const [selectedStrokeColor, setSelectedStrokeColor] = useState<Object>(COLORS[1]);
+  const [opacity, setOpacity] = useState<number>(100);
 
   const handleSelectShape = (value: string) => {
     if (!instance) return;

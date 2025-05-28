@@ -86,8 +86,6 @@ function DashBoard() {
 
   const token = Cookies.get('DITokens');
 
-  console.log('Token: ', token);
-
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);

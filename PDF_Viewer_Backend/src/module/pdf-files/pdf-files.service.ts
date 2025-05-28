@@ -15,6 +15,7 @@ import { DeleteLinkPermissionDto } from './dto/delete-link-permisson.dto';
 import { RecentDocument } from '../recent-document/schemas/recent-document.schema';
 import { IsPublicDto } from './dto/is-public.dto';
 import { MailerService } from '@nestjs-modules/mailer';
+import { Annotation } from '../annotations/schemas/annotation.schema';
 
 @Injectable()
 export class PdfFilesService {
@@ -23,6 +24,8 @@ export class PdfFilesService {
     private pdfFileModel: Model<PdfFile>,
     @InjectModel(User.name)
     private readonly userModel: Model<User>,
+    @InjectModel(Annotation.name)
+    private readonly annotationModel: Model<Annotation>,
     @InjectModel(RecentDocument.name)
     private readonly recentDocumentModel: Model<RecentDocument>,
     private readonly cloudinaryService: CloudinaryService,
@@ -55,9 +58,15 @@ export class PdfFilesService {
       date: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
     });
 
+    const newAnnotation = await this.annotationModel.create({
+      pdfId: newPdfFile,
+      xfdf: '',
+    });
+
     return {
       newRecent,
       newPdfFile,
+      newAnnotation,
     };
   }
 
@@ -66,6 +75,8 @@ export class PdfFilesService {
     const file = await this.pdfFileModel.findById(fileId);
 
     if (!file) throw new BadRequestException('File id not found');
+
+    const annotation = await this.annotationModel.findOne({ pdfId: file._id });
 
     const isOwner = file.ownerId === userId;
 
@@ -120,6 +131,7 @@ export class PdfFilesService {
               fullName: ownerInformation?.fullName,
               avatar: ownerInformation?.avatar,
             },
+            annotation,
             access: isOwner ? 'Owner' : sharedItem?.access,
           };
         }
@@ -130,19 +142,10 @@ export class PdfFilesService {
             fullName: ownerInformation?.fullName,
             avatar: ownerInformation?.avatar,
           },
+          annotation,
           access: 'Guest',
         };
       } else throw new BadRequestException('Shared not found');
-
-      // return {
-      //   file: file,
-      //   owner: {
-      //     gmail: ownerInformation?.gmail,
-      //     fullName: ownerInformation?.fullName,
-      //     avatar: ownerInformation?.avatar,
-      //   },
-      //   access: isOwner ? 'Owner' : sharedItem?.access,
-      // };
     }
 
     if (userId) {
@@ -154,6 +157,7 @@ export class PdfFilesService {
             fullName: ownerInformation?.fullName,
             avatar: ownerInformation?.avatar,
           },
+          annotation,
           access: 'Owner',
         };
 
@@ -167,6 +171,7 @@ export class PdfFilesService {
           fullName: ownerInformation?.fullName,
           avatar: ownerInformation?.avatar,
         },
+        annotation,
         access: permission.access,
       };
     }

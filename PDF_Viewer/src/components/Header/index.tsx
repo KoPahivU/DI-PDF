@@ -29,6 +29,7 @@ function Header() {
   const toggleOpen = () => setOpen(!open);
 
   const handleSelect = (code: string) => {
+    console.log(code);
     setSelected(code);
     i18n.changeLanguage(code);
     setOpen(false);
@@ -74,91 +75,63 @@ function Header() {
         </div>
       ) : (
         <div className={cx('right-header')} ref={dropdownRef}>
-          {/* <div style={{ position: 'relative', display: 'inline-block' }}>
+          <div style={{ position: 'relative', display: 'inline-block' }}>
             <div
               onClick={toggleOpen}
               style={{
                 cursor: 'pointer',
                 border: '1px solid #ccc',
                 padding: '6px 12px',
-                borderRadius: '4px',
+                borderRadius: '10px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 userSelect: 'none',
+                backgroundColor: '#fff',
+                boxSizing: 'border-box',
               }}
             >
               <FontAwesomeIcon icon={languages.find((l) => l.code === selected)?.icon || faGlobe} />
               {languages.find((l) => l.code === selected)?.label || 'EN'}
             </div>
-          </div> */}
-          {/* {open && (
-            <ul
-              style={{
-                position: 'absolute',
-                top: 'calc(100% + 4px)',
-                left: 0,
-                listStyle: 'none',
-                margin: 0,
-                padding: '4px 0',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-                backgroundColor: '#fff',
-                borderRadius: '4px',
-                width: '100%',
-                zIndex: 1000,
-              }}
-            >
-              {languages.map(({ code, label, icon }) => (
-                <li
-                  key={code}
-                  onClick={() => handleSelect(code)}
-                  style={{
-                    padding: '8px 12px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    backgroundColor: code === selected ? '#eee' : 'transparent',
-                  }}
-                >
-                  <FontAwesomeIcon icon={icon} />
-                  {label}
-                </li>
-              ))}
-            </ul>
-          )}
-          <div
-            style={{
-              border: '2px solid #FAE182',
-              padding: '10px',
-              gap: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              color: 'white',
-              borderRadius: '10px',
-              cursor: 'pointer',
-            }}
-          >
-            <FontAwesomeIcon icon={faGlobe} />
-            <select
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                i18n.changeLanguage(e.target.value);
-              }}
-              defaultValue={i18n.language}
-              style={{
-                border: 'none',
-                backgroundColor: 'transparent',
-                color: 'white',
-              }}
-            >
-              <option value="en" style={{ color: 'black' }}>
-                EN
-              </option>
-              <option value="vi" style={{ color: 'black' }}>
-                VI
-              </option>
-            </select>
-          </div> */}
+
+            {open && (
+              <ul
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 4px)',
+                  left: 0,
+                  listStyle: 'none',
+                  margin: 0,
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                  backgroundColor: '#fff',
+                  borderRadius: '4px',
+                  minWidth: '100%',
+                  boxSizing: 'border-box',
+                  zIndex: 1000,
+                }}
+              >
+                {languages.map(({ code, label, icon }) => (
+                  <li
+                    key={code}
+                    onClick={() => handleSelect(code)}
+                    style={{
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      backgroundColor: code === selected ? '#eee' : 'transparent',
+                    }}
+                  >
+                    <FontAwesomeIcon icon={icon} />
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           {token && <span style={{ color: 'white', fontSize: '1.4rem' }}>Good day, {profile?.fullName}</span>}
           <img
             className={cx('avatar')}
