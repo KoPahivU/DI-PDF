@@ -19,7 +19,7 @@ export function GuestDashboard() {
         <strong style={{ cursor: 'pointer', color: '#f5c731' }} onClick={() => navigate('/auth/signin')}>
           {t('Sign In')}
         </strong>
-        {t('to experience more features.')}
+        {t('to experience more features')}...
       </h1>
     </div>
   );

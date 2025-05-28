@@ -54,7 +54,7 @@ function SignUp() {
   const [reTypePasswordVisbility, setReTypePasswordVisbility] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [successPopup, setSuccessPopup] = useState(true);
+  const [successPopup, setSuccessPopup] = useState(false);
 
   const [acceptStatus, setAcceptStatus] = useState(false);
 
@@ -279,10 +279,12 @@ function SignUp() {
 
         <div className={cx('accept-box')} onClick={() => setAcceptStatus(!acceptStatus)}>
           <FontAwesomeIcon icon={acceptStatus ? faSquareCheck : faSquare} className={cx('checkbox')} />
-          <h1>{t('I accept all')}</h1>
-          <h2 className={cx('bold')}>{t('Terms of Service')}</h2>
-          <h1>{t('and')}</h1>
-          <h2 className={cx('bold')}>{t('Privacy Policy')}</h2>
+          <span>
+            {t('I accept all')}
+            <strong className={cx('bold')}>{t('Terms of Service')}</strong>
+            {t('and')}
+            <strong className={cx('bold')}>{t('Privacy Policy')}</strong>
+          </span>
         </div>
 
         <div

@@ -156,6 +156,7 @@
 
 .bold {
   font-weight: 700;
+  padding: 0 4px;
 }
 
 .sign-button {
@@ -300,4 +301,9 @@
 .link {
   cursor: pointer;
   color: #f5c731;
+}
+
+.checkbox {
+  height: 20px;
+  width: 20px;
 }

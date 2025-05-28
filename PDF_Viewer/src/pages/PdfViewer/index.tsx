@@ -185,7 +185,9 @@ const PdfViewer: React.FC = () => {
 
   const [selectedAnnot, setSelectedAnnot] = useState<any>(null);
   const [popupPosition, setPopupPosition] = useState<{ x: number; y: number } | null>(null);
-  const [annotationManager, setAnnotationManager] = useState<Core.AnnotationManager | null>(null);
+  const annotationManagerRef = useRef<any>(null);
+
+  const [annotationManager, setAnnotationManager] = useState<any>(null);
   const [xfdf, setXfdf] = useState<string | null>(null);
   const [isDocumentLoaded, setIsDocumentLoaded] = useState<boolean>(false);
 
@@ -274,7 +276,7 @@ const PdfViewer: React.FC = () => {
         }
 
         const responseData = await res.json();
-        console.log('responseData: ', responseData);
+        // console.log('responseData: ', responseData);
         const newPdfData: PdfData = {
           _id: responseData.data.file._id,
           url: responseData.data.file.storagePath,
@@ -289,15 +291,13 @@ const PdfViewer: React.FC = () => {
 
         console.log(responseData);
 
-        // setXfdf(responseData.data.annotation.xfdf);
+        setXfdf(responseData.data.annotation.xfdf);
 
         // Cache file mới với ETag và Last-Modified
         const etag = res.headers.get('ETag');
         const lastModified = res.headers.get('Last-Modified') || newPdfData.updatedAt;
 
         const blobUrl = await cachePdfFile(pdfId, newPdfData, etag || undefined, lastModified || undefined);
-
-        console.log('Hehee');
 
         setPdfData(newPdfData);
         setPdfBlobUrl(blobUrl);
@@ -341,8 +341,10 @@ const PdfViewer: React.FC = () => {
   const postAnnotations = async () => {
     try {
       setOnSave(true);
-      const xfdfString = await annotationManager?.exportAnnotations();
-
+      const xfdfString = await annotationManagerRef.current?.exportAnnotations();
+      // console.log('xfdfString: ', xfdfString);
+      // console.log('annotationManager: ', annotationManager);
+      // console.log('annotationManagerRef.current: ', annotationManagerRef.current);
       const res = await fetch(`${process.env.REACT_APP_BE_URI}/annotations`, {
         method: 'POST',
         headers: {
@@ -350,7 +352,7 @@ const PdfViewer: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          pdfId: pdfData?._id,
+          pdfId: id,
           xfdf: xfdfString,
         }),
       });
@@ -362,7 +364,7 @@ const PdfViewer: React.FC = () => {
       }
 
       const responseData = await res.json();
-      console.log(responseData);
+      // console.log(responseData);
     } catch (error) {
       console.error('postAnnotations error:', error);
       return;
@@ -424,8 +426,10 @@ const PdfViewer: React.FC = () => {
           instance.UI.setZoomLevel(`${zoomLevel}%`);
         });
 
-        const { annotationManager } = instance.Core;
+        const { annotationManager, documentViewer } = instance.Core;
+
         setAnnotationManager(annotationManager);
+        annotationManagerRef.current = annotationManager;
 
         annotationManager.addEventListener('annotationSelected', (annotations, action) => {
           if (action === 'selected' && annotations.length > 0) {
@@ -547,14 +551,14 @@ const PdfViewer: React.FC = () => {
 
   useEffect(() => {
     const interval = setInterval(async () => {
-      if (!xfdf) {
-        return;
+      if (pdfData && pdfData?.access !== 'View' && pdfData?.access !== 'Guest') {
+        console.log('Post annotations');
+        await postAnnotations();
       }
-      await postAnnotations();
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [xfdf]);
+  }, []);
 
   if (fileStatus === 'Not found') {
     return <NotFoundLayout />;
@@ -751,7 +755,7 @@ const PdfViewer: React.FC = () => {
         <PermissionBox access={pdfData?.access} setPermissionPopup={setPermissionPopup} pdfData={pdfData} />
       )}
 
-      {selectedAnnot && popupPosition && (
+      {selectedAnnot && popupPosition && pdfData.access !== 'View' && pdfData.access !== 'Guest' && (
         <div
           style={{
             position: 'absolute',
