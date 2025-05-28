@@ -1,6 +1,6 @@
 .wrapper {
   position: absolute;
-  bottom: 100%;
+  bottom: calc(100% - 30px);
   right: 0;
   background: #f5f5f5;
   border-radius: 8px;
@@ -59,7 +59,7 @@
   justify-content: center;
 
   &.selected {
-    border-color: black;
+    border-color: rgb(129, 128, 128);
   }
 }
 

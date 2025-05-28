@@ -18,10 +18,11 @@ import { useAuth } from '../../layout/DashBoardLayout';
 import { Loading } from '../../components/Loading';
 import NotFoundLayout from '../../layout/NotFoundLayout';
 import { NoPermission } from '../../components/NoPermission';
-import WebViewer, { WebViewerInstance } from '@pdftron/webviewer';
+import WebViewer, { Core, WebViewerInstance } from '@pdftron/webviewer';
 import { Shape } from '~/components/DropDown/Shape';
 import { ShapePop } from '~/components/Popup/ShapePop';
 import { Text } from '~/components/DropDown/Text';
+import { TextPop } from '~/components/Popup/TextPop';
 
 const cx = classNames.bind(styles);
 
@@ -175,12 +176,12 @@ const PdfViewer: React.FC = () => {
   const instanceRef = useRef<any>(null);
   const [zoomLevel, setZoomLevel] = useState(100);
 
-  const [shapeDropDown, setShapeDropDown] = useState(true);
-  const [textDropDown, setTextDropDown] = useState(true);
   const [dropDown, setDropDown] = useState<string | null>(null);
 
   const [selectedAnnot, setSelectedAnnot] = useState<any>(null);
   const [popupPosition, setPopupPosition] = useState<{ x: number; y: number } | null>(null);
+  const [annotations, setAnnotations] = useState<Object | null>(null);
+  const [annotationManager, setAnnotationManager] = useState<Core.AnnotationManager | null>(null);
 
   const checkFileModified = useCallback(
     async (pdfId: string, cachedEntry: PdfCacheEntry) => {
@@ -347,20 +348,7 @@ const PdfViewer: React.FC = () => {
         });
 
         const { annotationManager } = instance.Core;
-
-        annotationManager.addEventListener('annotationChanged', (annotations, action) => {
-          if (action === 'add') {
-            console.log('this is a change that added annotations');
-          } else if (action === 'modify') {
-            console.log('this change modified annotations');
-          } else if (action === 'delete') {
-            console.log('there were annotations deleted');
-          }
-
-          annotations.forEach((annot: any) => {
-            console.log('annotation page number', annot.PageNumber);
-          });
-        });
+        setAnnotationManager(annotationManager);
 
         annotationManager.addEventListener('annotationSelected', (annotations, action) => {
           if (action === 'selected' && annotations.length > 0) {
@@ -371,18 +359,20 @@ const PdfViewer: React.FC = () => {
             console.log('annotation deselection');
             setSelectedAnnot(null);
           }
-
-          console.log('annotation list', annotations);
-
-          if (annotations === null && action === 'deselected') {
-            console.log('all annotations deselected');
-          }
         });
+
+        // const topHeader = new instance.UI.Components.ModularHeader({
+        //   dataElement: 'default-top-header',
+        // });
+
+        // instance.UI.setModularHeaders([topHeader]);
 
         webViewerInitialized.current = true;
       });
     }
   }, [pdfData, zoomLevel]);
+
+  console.log('annotationManager: ', annotationManager);
 
   const handleMouseClick = (event: React.MouseEvent) => {
     if (!viewerRef.current) return;
@@ -673,7 +663,11 @@ const PdfViewer: React.FC = () => {
             padding: '10px',
           }}
         >
-          <ShapePop instance={instance} selectedAnnot={selectedAnnot} />
+          {selectedAnnot.Subject === 'Free Text' ? (
+            <TextPop instance={instance} selectedAnnot={selectedAnnot} />
+          ) : (
+            <ShapePop instance={instance} selectedAnnot={selectedAnnot} />
+          )}
         </div>
       )}
     </div>

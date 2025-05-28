@@ -97,3 +97,15 @@
     background-position: 100% 50%;
   }
 }
+
+/* Ẩn toàn bộ header mặc định */
+div[data-element='toolsHeader'] {
+  display: none !important;
+}
+
+/* Ẩn các nút cụ thể nếu cần */
+div[data-element='viewControlsButton'],
+div[data-element='menuButton'],
+div[data-element='searchButton'] {
+  display: none !important;
+}

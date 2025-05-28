@@ -6,45 +6,40 @@ import { WebViewerInstance } from '@pdftron/webviewer';
 const cx = classNames.bind(styles);
 
 export const COLORS = [
-  '#000000', // black
-  '#E53935', // red
-  '#4285F4', // blue
-  '#4DB6AC', // teal
-  '#FFEB3B', // yellow
-  '#D1ECF1', // light blue
-  '#FFFFFF', // white
+  { R: 0, G: 0, B: 0, A: 0 },
+  { R: 0, G: 0, B: 0, A: 1 },
+  { R: 229, G: 57, B: 53, A: 1 },
+  { R: 66, G: 133, B: 244, A: 1 },
+  { R: 77, G: 182, B: 172, A: 1 },
+  { R: 255, G: 235, B: 59, A: 1 },
+  { R: 209, G: 236, B: 241, A: 1 },
+  { R: 255, G: 255, B: 255, A: 1 },
 ];
 
-export function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  // Xoá dấu # nếu có
-  hex = hex.replace(/^#/, '');
+const handleChooseColor = (
+  instance: WebViewerInstance,
+  selectedFillColor: Object,
+  selectedStrokeColor: Object,
+  value: string,
+  strokeWidth: number,
+  opacity: number,
+) => {
+  const { documentViewer } = instance.Core;
 
-  // Hỗ trợ mã ngắn như #abc
-  if (hex.length === 3) {
-    hex = hex
-      .split('')
-      .map((char) => char + char)
-      .join('');
-  }
-
-  if (hex.length !== 6) {
-    throw new Error('Mã màu hex không hợp lệ');
-  }
-
-  const bigint = parseInt(hex, 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-
-  return { r, g, b };
-}
+  documentViewer.getTool(value).setStyles({
+    StrokeThickness: strokeWidth,
+    FillColor: selectedFillColor,
+    StrokeColor: selectedStrokeColor,
+    Opacity: Number((opacity / 100).toFixed(2)),
+  });
+};
 
 export function Shape({ instance }: { instance: WebViewerInstance | null }) {
   const [selectedStyle, setSelectedStyle] = useState<'fill' | 'stroke'>('fill');
   const [selectedShape, setSelectedShape] = useState<string | null>(null);
   const [strokeWidth, setStrokeWidth] = useState<number>(1);
-  const [selectedFillColor, setSelectedFillColor] = useState<string>('#000000');
-  const [selectedStrokeColor, setSelectedStrokeColor] = useState<string>('#000000');
+  const [selectedFillColor, setSelectedFillColor] = useState<Object>(COLORS[0]);
+  const [selectedStrokeColor, setSelectedStrokeColor] = useState<Object>(COLORS[0]);
   const [opacity, setOpacity] = useState<number>(50);
 
   const handleSelectShape = (value: string) => {
@@ -53,35 +48,12 @@ export function Shape({ instance }: { instance: WebViewerInstance | null }) {
     setSelectedShape(value);
     instance.UI.setToolMode(value);
 
-    const { documentViewer, Annotations } = instance.Core;
-
-    const { r: fillR, g: fillG, b: fillB } = hexToRgb(selectedFillColor);
-    const { r: strokeR, g: strokeG, b: strokeB } = hexToRgb(selectedStrokeColor);
-
-    documentViewer.getTool(value).setStyles({
-      StrokeThickness: strokeWidth,
-      FillColor: new Annotations.Color(fillR, fillG, fillB),
-      StrokeColor: new Annotations.Color(strokeR, strokeG, strokeB),
-      Opacity: Number((opacity / 100).toFixed(2)),
-    });
-
-    console.log(instance.UI);
+    handleChooseColor(instance, selectedFillColor, selectedStrokeColor, value, strokeWidth, opacity);
   };
 
   useEffect(() => {
     if (!instance || !selectedShape) return;
-
-    const { documentViewer, Annotations } = instance.Core;
-
-    const { r: fillR, g: fillG, b: fillB } = hexToRgb(selectedFillColor);
-    const { r: strokeR, g: strokeG, b: strokeB } = hexToRgb(selectedStrokeColor);
-
-    documentViewer.getTool(selectedShape).setStyles({
-      StrokeThickness: strokeWidth,
-      FillColor: new Annotations.Color(fillR, fillG, fillB),
-      StrokeColor: new Annotations.Color(strokeR, strokeG, strokeB),
-      Opacity: Number((opacity / 100).toFixed(2)),
-    });
+    handleChooseColor(instance, selectedFillColor, selectedStrokeColor, selectedShape, strokeWidth, opacity);
   }, [opacity, strokeWidth, selectedFillColor, selectedStrokeColor, instance, selectedShape]);
 
   return (
@@ -219,25 +191,44 @@ export function Shape({ instance }: { instance: WebViewerInstance | null }) {
       )}
 
       <div className={cx('color-picker')}>
-        {COLORS.map((color) => (
-          <div
-            key={color}
-            className={cx('color-dot', {
-              selected: selectedStyle === 'fill' ? selectedFillColor === color : selectedStrokeColor === color,
-            })}
-            onClick={() => (selectedStyle === 'fill' ? setSelectedFillColor(color) : setSelectedStrokeColor(color))}
-          >
+        {COLORS.map((color, index) => {
+          const isSelected = selectedStyle === 'fill' ? selectedFillColor === color : selectedStrokeColor === color;
+
+          if (color.A === 0) {
+            return (
+              <div
+                key={index}
+                className={cx('color-dot', { selected: isSelected })}
+                onClick={() => (selectedStyle === 'fill' ? setSelectedFillColor(color) : setSelectedStrokeColor(color))}
+              >
+                <svg width="20" height="20" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M20.4003 11C20.4002 8.61985 19.5138 6.44743 18.0554 4.79141L4.79092 18.0559C6.44694 19.5143 8.61936 20.4007 10.9995 20.4008C16.191 20.4008 20.4003 16.1915 20.4003 11ZM1.5999 11C1.5999 13.3796 2.48587 15.5515 3.94365 17.2074L17.2069 3.94414C15.551 2.48636 13.3791 1.60039 10.9995 1.60039C5.80834 1.6006 1.60011 5.80883 1.5999 11ZM21.6003 11C21.6003 16.8542 16.8537 21.6008 10.9995 21.6008C5.14547 21.6006 0.399902 16.8541 0.399902 11C0.400113 5.14609 5.1456 0.400602 10.9995 0.400391C16.8536 0.400391 21.6001 5.14596 21.6003 11Z"
+                    fill="#5A5A5A"
+                  />
+                </svg>
+              </div>
+            );
+          }
+
+          return (
             <div
-              style={{
-                backgroundColor: color,
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                border: '0.5px solid #d0d0d0',
-              }}
-            />
-          </div>
-        ))}
+              key={index}
+              className={cx('color-dot', { selected: isSelected })}
+              onClick={() => (selectedStyle === 'fill' ? setSelectedFillColor(color) : setSelectedStrokeColor(color))}
+            >
+              <div
+                style={{
+                  backgroundColor: `rgba(${color.R}, ${color.G}, ${color.B}, ${color.A})`,
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  border: '0.5px solid #d0d0d0',
+                }}
+              />
+            </div>
+          );
+        })}
       </div>
 
       <span>Opacity</span>
