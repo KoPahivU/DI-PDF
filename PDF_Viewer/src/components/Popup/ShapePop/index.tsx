@@ -14,7 +14,6 @@ export const toPDFColor = (instance: WebViewerInstance | null, colorObj: any) =>
 };
 
 export const toPlainColorObject = (color: any) => {
-  console.log('toPlainColorObject', color);
   return {
     R: color?.R ?? 0,
     G: color?.G ?? 0,

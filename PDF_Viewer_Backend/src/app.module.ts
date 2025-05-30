@@ -14,6 +14,7 @@ import { PdfFilesModule } from './module/pdf-files/pdf-files.module';
 import { RecentDocumentModule } from './module/recent-document/recent-document.module';
 import { AnnotationsModule } from './module/annotations/annotations.module';
 import { CacheModule } from '@nestjs/cache-manager';
+import { GateWayModule } from './common/gateway/gateway.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { CacheModule } from '@nestjs/cache-manager';
       inject: [ConfigService],
     }),
     CacheModule.register(),
+    GateWayModule,
     UserModule,
     AuthModule,
     CloudinaryModule,

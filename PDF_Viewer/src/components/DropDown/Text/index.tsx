@@ -42,7 +42,7 @@ export function Text({ instance }: { instance: WebViewerInstance | null }) {
       Opacity: Number((opacity / 100).toFixed(2)),
     });
 
-    console.log('AnnotationCreateFreeText: ', documentViewer.getTool('AnnotationCreateFreeText'));
+    // console.log('AnnotationCreateFreeText: ', documentViewer.getTool('AnnotationCreateFreeText'));
   }, [instance, fontSize, fontFamily, selectedTextColor, selectedFillColor, selectedBorderColor, opacity]);
 
   return (

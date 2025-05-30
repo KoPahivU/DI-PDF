@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Socket.IO Test</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  </head>
+  <body>
+    <h1>WebSocket Test</h1>
+    <input id="msgInput" placeholder="Nhập tin nhắn..." />
+    <button onclick="sendMessage()">Gửi</button>
+
+    <ul id="messages"></ul>
+
+    <script>
+      const socket = io('http://localhost:8081', {
+        path: '/socket.io',
+      });
+
+      socket.on('msgToClient', (data) => {
+        const li = document.createElement('li');
+        li.textContent = data;
+        document.getElementById('messages').appendChild(li);
+      });
+
+      function sendMessage() {
+        const msg = document.getElementById('msgInput').value;
+        socket.emit('msgToServer', msg);
+      }
+    </script>
+  </body>
+</html>

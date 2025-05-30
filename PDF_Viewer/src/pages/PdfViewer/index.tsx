@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Document, Page } from 'react-pdf';
 import styles from './PdfViewer.module.scss';
 import classNames from 'classnames/bind';
 import Cookies from 'js-cookie';
@@ -18,14 +17,15 @@ import { useAuth } from '../../layout/DashBoardLayout';
 import { Loading } from '../../components/Loading';
 import NotFoundLayout from '../../layout/NotFoundLayout';
 import { NoPermission } from '../../components/NoPermission';
-import WebViewer, { Core, WebViewerInstance } from '@pdftron/webviewer';
+import WebViewer, { WebViewerInstance } from '@pdftron/webviewer';
 import { Shape } from '~/components/DropDown/Shape';
 import { ShapePop } from '~/components/Popup/ShapePop';
 import { Text } from '~/components/DropDown/Text';
 import { TextPop } from '~/components/Popup/TextPop';
 import { OnSave } from '~/components/Popup/OnSave';
-import { RequireHigherPermission } from '~/components/DropDown/RequireHigherPermission';
 import { useTranslation } from 'react-i18next';
+import { socket } from '~/socket';
+import { io } from 'socket.io-client';
 
 const cx = classNames.bind(styles);
 
@@ -50,109 +50,6 @@ export interface PdfData {
   isPublic: boolean;
   updatedAt: string;
 }
-
-interface PdfCacheEntry {
-  data: PdfData;
-  blobUrl: string;
-  timestamp: number;
-  etag?: string;
-  lastModified?: string;
-}
-
-interface PdfCache {
-  [pdfId: string]: PdfCacheEntry;
-}
-
-// Cache constants
-const CACHE_EXPIRATION = 60 * 60 * 1000; // 1 giờ
-const MAX_CACHE_SIZE = 50;
-
-// Cache Service
-const getPdfCache = (): PdfCache => {
-  try {
-    const cache = localStorage.getItem('pdfCache');
-    return cache ? JSON.parse(cache) : {};
-  } catch (error) {
-    console.error('Error reading PDF cache:', error);
-    return {};
-  }
-};
-
-const savePdfCache = (cache: PdfCache) => {
-  try {
-    localStorage.setItem('pdfCache', JSON.stringify(cache));
-  } catch (error) {
-    console.error('Error saving PDF cache:', error);
-    // Nếu cache quá lớn, xóa bớt
-    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-      const keys = Object.keys(cache);
-      if (keys.length > 10) {
-        // Giữ lại 10 file mới nhất
-        const sortedKeys = keys.sort((a, b) => (cache[b].timestamp || 0) - (cache[a].timestamp || 0));
-        const newCache: PdfCache = {};
-        sortedKeys.slice(0, 10).forEach((key) => {
-          newCache[key] = cache[key];
-        });
-        localStorage.setItem('pdfCache', JSON.stringify(newCache));
-      }
-    }
-  }
-};
-
-const cleanPdfCache = () => {
-  const cache = getPdfCache();
-  const now = Date.now();
-  let hasChanged = false;
-
-  Object.keys(cache).forEach((pdfId) => {
-    const entry = cache[pdfId];
-    if (now - entry.timestamp > CACHE_EXPIRATION) {
-      URL.revokeObjectURL(entry.blobUrl);
-      delete cache[pdfId];
-      hasChanged = true;
-    }
-  });
-
-  // Giới hạn số lượng file trong cache
-  if (Object.keys(cache).length > MAX_CACHE_SIZE) {
-    const sortedKeys = Object.keys(cache).sort((a, b) => (cache[b].timestamp || 0) - (cache[a].timestamp || 0));
-    sortedKeys.slice(MAX_CACHE_SIZE).forEach((key) => {
-      URL.revokeObjectURL(cache[key].blobUrl);
-      delete cache[key];
-    });
-    hasChanged = true;
-  }
-
-  if (hasChanged) savePdfCache(cache);
-};
-
-const cachePdfFile = async (pdfId: string, pdfData: PdfData, etag?: string, lastModified?: string): Promise<string> => {
-  const cache = getPdfCache();
-
-  try {
-    const response = await fetch(pdfData.url);
-    const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
-
-    cache[pdfId] = {
-      data: pdfData,
-      blobUrl,
-      timestamp: Date.now(),
-      etag,
-      lastModified,
-    };
-
-    savePdfCache(cache);
-    return blobUrl;
-  } catch (error) {
-    console.error('Error caching PDF file:', error);
-    throw error;
-  }
-};
-
-const getCachedPdf = (pdfId: string): PdfCacheEntry | null => {
-  return getPdfCache()[pdfId] || null;
-};
 
 const ZOOM_LEVELS = [50, 75, 90, 100, 125, 150, 200];
 
@@ -193,70 +90,14 @@ const PdfViewer: React.FC = () => {
 
   const [onSave, setOnSave] = useState<boolean>(false);
 
-  const checkFileModified = useCallback(
-    async (pdfId: string, cachedEntry: PdfCacheEntry) => {
-      try {
-        const headers: Record<string, string> = {
-          Authorization: `Bearer ${token}`,
-        };
+  const isImporting = useRef(false);
 
-        // Sử dụng conditional headers nếu có trong cache
-        if (cachedEntry.etag) {
-          headers['If-None-Match'] = cachedEntry.etag;
-        }
-        if (cachedEntry.lastModified) {
-          headers['If-Modified-Since'] = cachedEntry.lastModified;
-        }
-
-        const res = await fetch(
-          `${process.env.REACT_APP_BE_URI}/pdf-files/${pdfId}${shared ? `?shared=${shared}` : ''}`,
-          {
-            method: 'HEAD',
-            headers,
-          },
-        );
-
-        // 304 Not Modified - file không thay đổi
-        if (res.status === 304) {
-          return false;
-        }
-
-        // File đã thay đổi
-        if (res.ok) {
-          return true;
-        }
-
-        return false;
-      } catch (error) {
-        console.error('Error checking file modification:', error);
-        return false;
-      }
-    },
-    [shared, token],
-  );
+  const socket = io(process.env.REACT_APP_SOCKET_URI);
+  socket.emit('joinPdfRoom', id);
 
   const fetchPdfData = useCallback(
     async (pdfId: string, forceRefresh = false) => {
-      cleanPdfCache();
-
       try {
-        const cached = getCachedPdf(pdfId);
-        let shouldUseCache = false;
-
-        // Kiểm tra cache nếu không force refresh
-        if (cached && !forceRefresh) {
-          const isModified = await checkFileModified(pdfId, cached);
-          shouldUseCache = !isModified;
-        }
-
-        if (cached && shouldUseCache) {
-          setPdfData(cached.data);
-          setPdfBlobUrl(cached.blobUrl);
-          if (cached.data.ownerId === profile?._id) setIsOwner(true);
-          return;
-        }
-
-        // Fetch từ server
         const res = await fetch(
           `${process.env.REACT_APP_BE_URI}/pdf-files/${pdfId}${shared ? `?shared=${shared}` : ''}`,
           {
@@ -292,15 +133,7 @@ const PdfViewer: React.FC = () => {
         console.log(responseData);
 
         setXfdf(responseData.data.annotation.xfdf);
-
-        // Cache file mới với ETag và Last-Modified
-        const etag = res.headers.get('ETag');
-        const lastModified = res.headers.get('Last-Modified') || newPdfData.updatedAt;
-
-        const blobUrl = await cachePdfFile(pdfId, newPdfData, etag || undefined, lastModified || undefined);
-
         setPdfData(newPdfData);
-        setPdfBlobUrl(blobUrl);
         if (newPdfData.ownerId === profile?._id) setIsOwner(true);
       } catch (error) {
         console.error('Error fetching PDF:', error);
@@ -308,7 +141,7 @@ const PdfViewer: React.FC = () => {
         setIsRefreshing(false);
       }
     },
-    [profile, shared, token, checkFileModified],
+    [profile, shared, token],
   );
 
   // Áp dụng annotations
@@ -342,9 +175,6 @@ const PdfViewer: React.FC = () => {
     try {
       setOnSave(true);
       const xfdfString = await annotationManagerRef.current?.exportAnnotations();
-      // console.log('xfdfString: ', xfdfString);
-      // console.log('annotationManager: ', annotationManager);
-      // console.log('annotationManagerRef.current: ', annotationManagerRef.current);
       const res = await fetch(`${process.env.REACT_APP_BE_URI}/annotations`, {
         method: 'POST',
         headers: {
@@ -363,8 +193,8 @@ const PdfViewer: React.FC = () => {
         throw new Error(errorData.message || 'Invalid credentials');
       }
 
-      const responseData = await res.json();
-      // console.log(responseData);
+      // const responseData = await res.json();
+      // console.log('postAnnotations: ', responseData);
     } catch (error) {
       console.error('postAnnotations error:', error);
       return;
@@ -413,70 +243,127 @@ const PdfViewer: React.FC = () => {
   }, [instance]);
 
   useEffect(() => {
-    if (viewerRef.current && pdfData && !webViewerInitialized.current) {
-      WebViewer(
-        {
-          path: '/lib/webviewer',
-          licenseKey: 'demo:1748243908007:61f86d790300000000b53694e2aebb1c62c3d3148ee1cd8843885dbeb2',
-          initialDoc: `${pdfData.url}`,
-          disabledElements: ['annotationPopup', 'annotationStylePopup', 'contextMenuPopup'],
-        },
-        viewerRef.current!,
-      ).then((instance) => {
-        instanceRef.current = instance;
+    if (!viewerRef.current || !pdfData || webViewerInitialized.current) return;
+    WebViewer(
+      {
+        path: '/lib/webviewer',
+        licenseKey: 'demo:1748243908007:61f86d790300000000b53694e2aebb1c62c3d3148ee1cd8843885dbeb2',
+        initialDoc: `${pdfData.url}`,
+        disabledElements: ['annotationPopup', 'annotationStylePopup', 'contextMenuPopup'],
+      },
+      viewerRef.current!,
+    ).then((instance) => {
+      instanceRef.current = instance;
+      setInstance(instance);
 
-        setInstance(instance);
+      instance.UI.setToolMode('Pan');
 
-        instance.UI.setToolMode('Pan');
-
-        Object.values(instance.UI.hotkeys.Keys).forEach((key) => {
-          if (key === 'p' || key === 'ctrl+z' || key === 'escape') {
-            return;
-          }
-          instance.UI.hotkeys.off(key as string);
-        });
-
-        instance.Core.documentViewer.addEventListener('documentLoaded', async () => {
-          setIsDocumentLoaded(true);
-          instance.UI.setZoomLevel(`${zoomLevel}%`);
-        });
-
-        const { annotationManager } = instance.Core;
-
-        setAnnotationManager(annotationManager);
-        annotationManagerRef.current = annotationManager;
-
-        annotationManager.addEventListener('annotationSelected', (annotations, action) => {
-          if (action === 'selected' && annotations.length > 0) {
-            const annot = annotations[0];
-            setSelectedAnnot(annot);
-          } else if (action === 'deselected') {
-            setSelectedAnnot(null);
-          }
-        });
-
-        const topHeader = new instance.UI.Components.ModularHeader({
-          dataElement: 'header',
-          items: [],
-        });
-
-        instance.UI.disableElements([
-          'annotationPopup',
-          'annotationStylePopup',
-          'contextMenuPopup',
-          'stylePanel',
-          'annotationCommentButton',
-          'annotationStyleEditButton',
-          'linkButton',
-          'annotationDeleteButton',
-        ]);
-
-        instance.UI.setModularHeaders([topHeader]);
-
-        webViewerInitialized.current = true;
+      Object.values(instance.UI.hotkeys.Keys).forEach((key) => {
+        if (key === 'p' || key === 'ctrl+z' || key === 'escape') {
+          return;
+        }
+        instance.UI.hotkeys.off(key as string);
       });
-    }
+
+      instance.Core.documentViewer.addEventListener('documentLoaded', () => {
+        setIsDocumentLoaded(true);
+        instance.UI.setZoomLevel(`${zoomLevel}%`);
+      });
+
+      const { annotationManager } = instance.Core;
+
+      setAnnotationManager(annotationManager);
+      annotationManagerRef.current = annotationManager;
+
+      annotationManager.addEventListener('annotationSelected', (annotations, action) => {
+        if (action === 'selected' && annotations.length > 0) {
+          const annot = annotations[0];
+          setSelectedAnnot(annot);
+        } else if (action === 'deselected') {
+          setSelectedAnnot(null);
+        }
+      });
+
+      // const docId = `doc-${id}`;
+
+      // socket.on('annotationUpdate', (data) => {
+      //   if (data.id === docId && data.xfdf && isDocumentLoaded) {
+      //     console.log('Received via WS:', data.xfdf);
+      //     annotationManager.importAnnotations(data.xfdf);
+      //   }
+      // });
+
+      socket.on('msgToClient', (data) => {
+        console.log('Received via WS1:', data);
+        console.log(Boolean(data.message), '   ', Boolean(isDocumentLoaded));
+
+        if (data.message) {
+          console.log('Received via WS:', data.message);
+          isImporting.current = true;
+          annotationManager.importAnnotations(data.message).then(() => {
+            isImporting.current = false;
+          });
+        }
+      });
+
+      annotationManager.addEventListener('annotationChanged', async (annotations, action) => {
+        if (isImporting.current) return;
+        if (action === 'add' || action === 'modify') {
+          const xfdf = await annotationManager.exportAnnotations();
+          console.log('Send message');
+          socket.emit('msgToServer', {
+            pdfId: id,
+            message: xfdf,
+          });
+        }
+      });
+
+      if (pdfData.access === 'Guest' || pdfData.access === 'View') instance.Core.annotationManager.enableReadOnlyMode();
+
+      annotationManager.addEventListener('annotationChanged', async (annotations, action) => {
+        if (action === 'add' || action === 'modify') console.log(annotations, ': ', action);
+      });
+
+      const topHeader = new instance.UI.Components.ModularHeader({
+        dataElement: 'header',
+        items: [],
+      });
+
+      instance.UI.disableElements([
+        'annotationPopup',
+        'annotationStylePopup',
+        'contextMenuPopup',
+        'stylePanel',
+        'annotationCommentButton',
+        'annotationStyleEditButton',
+        'linkButton',
+        'annotationDeleteButton',
+      ]);
+
+      instance.UI.setModularHeaders([topHeader]);
+
+      webViewerInitialized.current = true;
+    });
   }, [pdfData, zoomLevel]);
+
+  // useEffect(() => {
+  //   const testConnection = async () => {
+  //     try {
+  //       const docRef = doc(db, 'test', 'ping');
+  //       const docSnap = await getDoc(docRef);
+
+  //       if (docSnap.exists()) {
+  //         console.log('✅ Kết nối Firestore thành công:', docSnap.data());
+  //       } else {
+  //         console.log('⚠️ Firestore OK, nhưng document không tồn tại');
+  //       }
+  //     } catch (error) {
+  //       console.error('❌ Lỗi kết nối Firestore:', error);
+  //     }
+  //   };
+
+  //   testConnection();
+  // }, []);
 
   const handleMouseClick = (event: React.MouseEvent) => {
     if (!viewerRef.current) return;
@@ -567,13 +454,17 @@ const PdfViewer: React.FC = () => {
   useEffect(() => {
     const interval = setInterval(async () => {
       if (pdfData && pdfData?.access !== 'View' && pdfData?.access !== 'Guest') {
-        console.log('Post annotations');
+        // console.log('Post annotations');
         await postAnnotations();
       }
     }, 10000);
 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    setSelectedAnnot(false);
+  }, [permissionPopup]);
 
   if (fileStatus === 'Not found') {
     return <NotFoundLayout />;

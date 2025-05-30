@@ -1,20 +1,33 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { CreateAnnotationDto } from './dto/create-annotation.dto';
-import { UpdateAnnotationDto } from './dto/update-annotation.dto';
 import { Annotation } from './schemas/annotation.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { PdfFile } from '../pdf-files/schemas/pdf-file.schema';
-
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 @Injectable()
 export class AnnotationsService {
   constructor(
     @InjectModel(Annotation.name)
     private annotationModel: Model<Annotation>,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async create(createAnnotationDto: CreateAnnotationDto) {
     const pdfId = new Types.ObjectId(createAnnotationDto.pdfId);
+
+    const cacheKey = createAnnotationDto.pdfId.toString();
+
+    let annotationCache = await this.cacheManager.get<Annotation>(cacheKey);
+    if (!annotationCache) {
+      annotationCache = await this.annotationModel.findOne({ pdfId });
+
+      await this.cacheManager.set(cacheKey, annotationCache, 3600);
+      console.log('New cache data');
+    } else {
+      console.log('Update cache data');
+      await this.cacheManager.set(cacheKey, annotationCache, 3600);
+    }
 
     const annotation = await this.annotationModel.findOne({ pdfId });
 

@@ -230,7 +230,7 @@ export function PermissionBox({
                 color: isPublic ? '#79c0da' : '#900b09',
               }}
             />
-            {isPublic ? 'Public' : 'Private'}
+            {isPublic ? t('Public') : t('Private')}
             <FontAwesomeIcon icon={faChevronDown} style={{ marginLeft: 'auto' }} />
           </div>
           <div className={cx('save')} onClick={postUserPermission}>

@@ -83,11 +83,21 @@ export class PdfFilesService {
 
     if (!file) throw new BadRequestException('File id not found');
 
-    let annotation = await this.cacheManager.get(fileId.toString());
-    annotation = annotation ? annotation : await this.annotationModel.findOne({ pdfId: file._id });
+    const cacheKey = fileId.toString();
+    let annotation = await this.cacheManager.get(cacheKey);
+    console.log('New cache data');
 
-    if (annotation)  throw new BadRequestException('Annotation not found');
-    // const annotation =
+    // Nếu cache không có, lấy từ DB
+    if (!annotation) {
+      annotation = await this.annotationModel.findOne({ pdfId: file._id });
+
+      if (!annotation) {
+        throw new BadRequestException('Annotation not found');
+      }
+
+      const newCache = await this.cacheManager.set(cacheKey, annotation, 3600);
+      console.log('New cache data: ', newCache);
+    }
 
     const isOwner = file.ownerId === userId;
 

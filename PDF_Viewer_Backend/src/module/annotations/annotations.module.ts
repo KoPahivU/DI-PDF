@@ -8,11 +8,13 @@ import { AuthService } from '@/auth/auth.service';
 import { AuthController } from '@/auth/auth.controller';
 import { Annotation, AnnotationSchema } from './schemas/annotation.schema';
 import { UserModule } from '../user/user.module';
+import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Annotation.name, schema: AnnotationSchema }]),
     forwardRef(() => UserModule),
+    CacheModule.register(),
   ],
   controllers: [AnnotationsController, AuthController],
   providers: [AnnotationsService, AuthService, JwtStrategy, LocalStrategy],
