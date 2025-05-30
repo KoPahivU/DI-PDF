@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { CreatePdfFileDto } from './dto/create-pdf-file.dto.dto';
 import { UpdatePdfFileDto } from './dto/update-pdf-file.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -16,6 +16,8 @@ import { RecentDocument } from '../recent-document/schemas/recent-document.schem
 import { IsPublicDto } from './dto/is-public.dto';
 import { MailerService } from '@nestjs-modules/mailer';
 import { Annotation } from '../annotations/schemas/annotation.schema';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class PdfFilesService {
@@ -30,6 +32,7 @@ export class PdfFilesService {
     private readonly recentDocumentModel: Model<RecentDocument>,
     private readonly cloudinaryService: CloudinaryService,
     private readonly mailerService: MailerService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async uploadPdf(file: Express.Multer.File, userId: Types.ObjectId | string, fileSizeDto: CreatePdfFileDto) {
@@ -65,6 +68,9 @@ export class PdfFilesService {
       xfdf: xfdfDefault,
     });
 
+    const cached = await this.cacheManager.set(newPdfFile._id.toString(), newAnnotation, 120);
+    console.log('Annotation from cache:', cached);
+
     return {
       newRecent,
       newPdfFile,
@@ -73,12 +79,15 @@ export class PdfFilesService {
   }
 
   async getPdf(fileId: Types.ObjectId | string, userId: Types.ObjectId | string, shared: string | null) {
-    // const fileObjectId = new Types.ObjectId(fileId);
     const file = await this.pdfFileModel.findById(fileId);
 
     if (!file) throw new BadRequestException('File id not found');
 
-    const annotation = await this.annotationModel.findOne({ pdfId: file._id });
+    let annotation = await this.cacheManager.get(fileId.toString());
+    annotation = annotation ? annotation : await this.annotationModel.findOne({ pdfId: file._id });
+
+    if (annotation)  throw new BadRequestException('Annotation not found');
+    // const annotation =
 
     const isOwner = file.ownerId === userId;
 
@@ -179,15 +188,6 @@ export class PdfFilesService {
     }
 
     throw new BadRequestException('Shared not found');
-    // return {
-    //   file,
-    //   owner: {
-    //     gmail: ownerInformation?.gmail,
-    //     fullName: ownerInformation?.fullName,
-    //     avatar: ownerInformation?.avatar,
-    //   },
-    //   access: 'Guest',
-    // };
   }
 
   async setIsPublic(body: IsPublicDto, userId: Types.ObjectId | string) {

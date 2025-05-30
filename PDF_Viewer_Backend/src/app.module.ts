@@ -13,6 +13,7 @@ import { AuthModule } from './auth/auth.module';
 import { PdfFilesModule } from './module/pdf-files/pdf-files.module';
 import { RecentDocumentModule } from './module/recent-document/recent-document.module';
 import { AnnotationsModule } from './module/annotations/annotations.module';
+import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   imports: [
@@ -41,7 +42,6 @@ import { AnnotationsModule } from './module/annotations/annotations.module';
         defaults: {
           from: '"No Reply" <no-reply@localhost>',
         },
-        // preview: true,
         template: {
           dir: process.cwd() + '/src/mail/templates/',
           adapter: new HandlebarsAdapter(),
@@ -52,6 +52,7 @@ import { AnnotationsModule } from './module/annotations/annotations.module';
       }),
       inject: [ConfigService],
     }),
+    CacheModule.register(),
     UserModule,
     AuthModule,
     CloudinaryModule,

@@ -398,6 +398,21 @@ const PdfViewer: React.FC = () => {
   const webViewerInitialized = useRef(false);
 
   useEffect(() => {
+    if (!instance) return;
+
+    const onZoomUpdated = () => {
+      const zoom = instance.Core.documentViewer.getZoomLevel();
+      setZoomLevel(zoom * 100); // Convert to percent
+    };
+
+    instance.Core.documentViewer.addEventListener('zoomUpdated', onZoomUpdated);
+
+    return () => {
+      instance.Core.documentViewer.removeEventListener('zoomUpdated', onZoomUpdated);
+    };
+  }, [instance]);
+
+  useEffect(() => {
     if (viewerRef.current && pdfData && !webViewerInitialized.current) {
       WebViewer(
         {
@@ -426,7 +441,7 @@ const PdfViewer: React.FC = () => {
           instance.UI.setZoomLevel(`${zoomLevel}%`);
         });
 
-        const { annotationManager, documentViewer } = instance.Core;
+        const { annotationManager } = instance.Core;
 
         setAnnotationManager(annotationManager);
         annotationManagerRef.current = annotationManager;

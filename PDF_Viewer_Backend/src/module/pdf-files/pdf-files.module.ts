@@ -11,6 +11,7 @@ import { PdfFile, PdfFileSchema } from './schemas/pdf-file.schema';
 import { CloudinaryModule } from '@/common/cloudinary/cloudinary.module';
 import { RecentDocumentModule } from '../recent-document/recent-document.module';
 import { AnnotationsModule } from '../annotations/annotations.module';
+import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AnnotationsModule } from '../annotations/annotations.module';
     forwardRef(() => RecentDocumentModule),
     CloudinaryModule,
     AnnotationsModule,
+    CacheModule.register(),
   ],
   controllers: [PdfFilesController, AuthController],
   providers: [PdfFilesService, AuthService, JwtStrategy, LocalStrategy],
