@@ -10,7 +10,6 @@ import {
   UploadedFile,
   Request,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { PdfFilesService } from './pdf-files.service';
 import { CreatePdfFileDto } from './dto/create-pdf-file.dto.dto';
@@ -22,6 +21,7 @@ import { AddLinkPermissionDto } from './dto/add-link-permission.dto';
 import { DeleteUserPermissionDto } from './dto/delete-user-permisson.dto';
 import { Public } from '@/common/decorator/customize';
 import { IsPublicDto } from './dto/is-public.dto';
+import { DeleteLinkPermissionDto } from './dto/delete-link-permisson.dto';
 
 @Controller('pdf-files')
 export class PdfFilesController {
@@ -74,36 +74,11 @@ export class PdfFilesController {
 
   @Delete('delete-user-permission')
   async removeUserPermission(@Request() req, @Body() body: DeleteUserPermissionDto) {
-    return await this.removeUserPermission(req.user._id, body);
+    return await this.pdfFilesService.removeUserPermission(req.user._id, body);
   }
 
   @Delete('delete-link-permission')
-  async removeLinkPermission(@Request() req, @Body() body: DeleteUserPermissionDto) {
-    return await this.removeLinkPermission(req.user._id, body);
-  }
-
-  @Post()
-  create(@Body() createPdfFileDto: CreatePdfFileDto) {
-    return this.pdfFilesService.create(createPdfFileDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.pdfFilesService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.pdfFilesService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePdfFileDto: UpdatePdfFileDto) {
-    return this.pdfFilesService.update(+id, updatePdfFileDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.pdfFilesService.remove(+id);
+  async removeLinkPermission(@Request() req, @Body() body: DeleteLinkPermissionDto) {
+    return await this.pdfFilesService.removeLinkPermission(req.user._id, body);
   }
 }

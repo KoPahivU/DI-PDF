@@ -393,24 +393,4 @@ export class PdfFilesService {
       return { message: 'Permission removed successfully' };
     } else throw new BadRequestException('Link not found');
   }
-
-  create(createPdfFileDto: CreatePdfFileDto) {
-    return 'This action adds a new pdfFile';
-  }
-
-  findAll() {
-    return `This action returns all pdfFiles`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} pdfFile`;
-  }
-
-  update(id: number, updatePdfFileDto: UpdatePdfFileDto) {
-    return `This action updates a #${id} pdfFile`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} pdfFile`;
-  }
 }

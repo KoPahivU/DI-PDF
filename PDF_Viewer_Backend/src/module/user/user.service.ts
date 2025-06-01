@@ -51,8 +51,9 @@ export class UserService {
     };
   }
 
-  async getProfile(userId: string | Types.ObjectId) {
-    const user = await this.userModel.findById(userId);
+  async getProfile(userId: string) {
+    const id = new Types.ObjectId(userId);
+    const user = await this.userModel.findById(id);
 
     if (!user) throw new BadRequestException('User not found.');
 
@@ -75,7 +76,8 @@ export class UserService {
   }
 
   async searchUser(search: SearchFileDto, paginationDto: PaginationDto) {
-    const file = await this.pdfFileModel.findById(search.fileId);
+    const fileId = new Types.ObjectId(search.fileId);
+    const file = await this.pdfFileModel.findById(fileId);
     const { page = 1, limit = 10 } = paginationDto;
     const skip = (page - 1) * limit;
 

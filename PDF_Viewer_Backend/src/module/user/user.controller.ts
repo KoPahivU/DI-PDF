@@ -26,7 +26,7 @@ export class UserController {
   }
 
   @Get('user-information/:id')
-  async getUserInformation(@Param() id: string) {
+  async getUserInformation(@Param('id') id: string) {
     return await this.userService.getUserInformation(id);
   }
 

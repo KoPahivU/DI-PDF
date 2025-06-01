@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 
 export class SearchFileDto {
   @IsNotEmpty()
-  fileId: Types.ObjectId;
+  fileId: string;
 
   @IsNotEmpty()
   searchInput: string;

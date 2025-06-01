@@ -24,8 +24,7 @@ import { Text } from '~/components/DropDown/Text';
 import { TextPop } from '~/components/Popup/TextPop';
 import { OnSave } from '~/components/Popup/OnSave';
 import { useTranslation } from 'react-i18next';
-import { socket } from '~/socket';
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 
 const cx = classNames.bind(styles);
 
@@ -69,7 +68,6 @@ const PdfViewer: React.FC = () => {
   const [fileStatus, setFileStatus] = useState<string>('');
   const [isOwner, setIsOwner] = useState<boolean>(false);
 
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   const viewerRef = useRef<HTMLDivElement>(null);
@@ -92,8 +90,21 @@ const PdfViewer: React.FC = () => {
 
   const isImporting = useRef(false);
 
-  const socket = io(process.env.REACT_APP_SOCKET_URI);
-  socket.emit('joinPdfRoom', id);
+  // const socket = io(process.env.REACT_APP_SOCKET_URI);
+
+  const socket = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    // Chỉ khởi tạo 1 lần
+    socket.current = io(process.env.REACT_APP_SOCKET_URI);
+
+    socket.current.emit('joinPdfRoom', id);
+
+    // Cleanup khi unmount
+    return () => {
+      socket.current?.disconnect();
+    };
+  }, [id]);
 
   const fetchPdfData = useCallback(
     async (pdfId: string, forceRefresh = false) => {
@@ -209,14 +220,6 @@ const PdfViewer: React.FC = () => {
     }
   }, [id, fetchPdfData]);
 
-  useEffect(() => {
-    return () => {
-      if (pdfBlobUrl) {
-        URL.revokeObjectURL(pdfBlobUrl);
-      }
-    };
-  }, [pdfBlobUrl]);
-
   const toggleDownload = async () => {
     if (!pdfData) return;
 
@@ -247,7 +250,7 @@ const PdfViewer: React.FC = () => {
     WebViewer(
       {
         path: '/lib/webviewer',
-        licenseKey: 'demo:1748243908007:61f86d790300000000b53694e2aebb1c62c3d3148ee1cd8843885dbeb2',
+        licenseKey: process.env.REACT_APP_LICENSE_KEY,
         initialDoc: `${pdfData.url}`,
         disabledElements: ['annotationPopup', 'annotationStylePopup', 'contextMenuPopup'],
       },
@@ -284,34 +287,12 @@ const PdfViewer: React.FC = () => {
         }
       });
 
-      // const docId = `doc-${id}`;
-
-      // socket.on('annotationUpdate', (data) => {
-      //   if (data.id === docId && data.xfdf && isDocumentLoaded) {
-      //     console.log('Received via WS:', data.xfdf);
-      //     annotationManager.importAnnotations(data.xfdf);
-      //   }
-      // });
-
-      socket.on('msgToClient', (data) => {
-        console.log('Received via WS1:', data);
-        console.log(Boolean(data.message), '   ', Boolean(isDocumentLoaded));
-
-        if (data.message) {
-          console.log('Received via WS:', data.message);
-          isImporting.current = true;
-          annotationManager.importAnnotations(data.message).then(() => {
-            isImporting.current = false;
-          });
-        }
-      });
-
       annotationManager.addEventListener('annotationChanged', async (annotations, action) => {
         if (isImporting.current) return;
         if (action === 'add' || action === 'modify') {
           const xfdf = await annotationManager.exportAnnotations();
           console.log('Send message');
-          socket.emit('msgToServer', {
+          socket.current?.emit('msgToServer', {
             pdfId: id,
             message: xfdf,
           });
@@ -345,6 +326,18 @@ const PdfViewer: React.FC = () => {
       webViewerInitialized.current = true;
     });
   }, [pdfData, zoomLevel]);
+
+  useEffect(() => {
+    socket.current?.on('msgToClient', (data) => {
+      console.log(Boolean(data.message), '   ', Boolean(isDocumentLoaded));
+      if (data.message && isDocumentLoaded) {
+        isImporting.current = true;
+        annotationManager.importAnnotations(data.message).then(() => {
+          isImporting.current = false;
+        });
+      }
+    });
+  }, [isDocumentLoaded, annotationManager, socket]);
 
   // useEffect(() => {
   //   const testConnection = async () => {
