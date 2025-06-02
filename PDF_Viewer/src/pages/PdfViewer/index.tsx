@@ -4,14 +4,7 @@ import classNames from 'classnames/bind';
 import Cookies from 'js-cookie';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faArrowLeft,
-  faArrowUpFromBracket,
-  faDownload,
-  faMinus,
-  faPlus,
-  faSync,
-} from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faArrowUpFromBracket, faDownload, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { PermissionBox } from '../../components/PermissionBox';
 import { useAuth } from '../../layout/DashBoardLayout';
 import { Loading } from '../../components/Loading';
@@ -25,6 +18,7 @@ import { TextPop } from '~/components/Popup/TextPop';
 import { OnSave } from '~/components/Popup/OnSave';
 import { useTranslation } from 'react-i18next';
 import { io, Socket } from 'socket.io-client';
+import { getPDFWithAnnotations, savePDFWithAnnotations } from '~/utils/indexedDB';
 
 const cx = classNames.bind(styles);
 
@@ -50,6 +44,13 @@ export interface PdfData {
   updatedAt: string;
 }
 
+interface StoredPDFData {
+  id: string;
+  file: Blob;
+  fileName: string;
+  xfdf: string;
+}
+
 const ZOOM_LEVELS = [50, 75, 90, 100, 125, 150, 200];
 
 const PdfViewer: React.FC = () => {
@@ -65,10 +66,9 @@ const PdfViewer: React.FC = () => {
   const [permissionPopup, setPermissionPopup] = useState(false);
 
   const [pdfData, setPdfData] = useState<PdfData | null>(null);
+  const [pdfBlob, setPdfBlob] = useState<StoredPDFData | null>(null);
   const [fileStatus, setFileStatus] = useState<string>('');
   const [isOwner, setIsOwner] = useState<boolean>(false);
-
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   const viewerRef = useRef<HTMLDivElement>(null);
   const [instance, setInstance] = useState<WebViewerInstance | null>(null);
@@ -94,20 +94,31 @@ const PdfViewer: React.FC = () => {
 
   const socket = useRef<Socket | null>(null);
 
+  // Tạo socket để real-time collab
   useEffect(() => {
-    // Chỉ khởi tạo 1 lần
     socket.current = io(process.env.REACT_APP_SOCKET_URI);
 
     socket.current.emit('joinPdfRoom', id);
 
-    // Cleanup khi unmount
     return () => {
       socket.current?.disconnect();
     };
   }, [id]);
 
+  useEffect(() => {
+    socket.current?.on('msgToClient', (data) => {
+      console.log(Boolean(data.message), '   ', Boolean(isDocumentLoaded));
+      if (data.message && isDocumentLoaded) {
+        isImporting.current = true;
+        annotationManager.importAnnotations(data.message).then(() => {
+          isImporting.current = false;
+        });
+      }
+    });
+  }, [isDocumentLoaded, annotationManager, socket]);
+
   const fetchPdfData = useCallback(
-    async (pdfId: string, forceRefresh = false) => {
+    async (pdfId: string) => {
       try {
         const res = await fetch(
           `${process.env.REACT_APP_BE_URI}/pdf-files/${pdfId}${shared ? `?shared=${shared}` : ''}`,
@@ -128,7 +139,6 @@ const PdfViewer: React.FC = () => {
         }
 
         const responseData = await res.json();
-        // console.log('responseData: ', responseData);
         const newPdfData: PdfData = {
           _id: responseData.data.file._id,
           url: responseData.data.file.storagePath,
@@ -141,15 +151,15 @@ const PdfViewer: React.FC = () => {
           updatedAt: responseData.data.file.updatedAt,
         };
 
-        console.log(responseData);
+        // console.log(responseData);
 
         setXfdf(responseData.data.annotation.xfdf);
         setPdfData(newPdfData);
         if (newPdfData.ownerId === profile?._id) setIsOwner(true);
+
+        return newPdfData;
       } catch (error) {
         console.error('Error fetching PDF:', error);
-      } finally {
-        setIsRefreshing(false);
       }
     },
     [profile, shared, token],
@@ -161,26 +171,6 @@ const PdfViewer: React.FC = () => {
       annotationManager.importAnnotations(xfdf);
     }
   }, [xfdf, isDocumentLoaded, annotationManager]);
-
-  const refreshPdf = () => {
-    if (!id) return;
-    setIsRefreshing(true);
-    fetchPdfData(id, true);
-  };
-
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey) {
-        e.preventDefault();
-      }
-    };
-
-    window.addEventListener('wheel', handleWheel, { passive: false });
-
-    return () => {
-      window.removeEventListener('wheel', handleWheel);
-    };
-  }, []);
 
   const postAnnotations = async () => {
     try {
@@ -215,10 +205,37 @@ const PdfViewer: React.FC = () => {
   };
 
   useEffect(() => {
-    if (id) {
-      fetchPdfData(id);
-    }
-  }, [id, fetchPdfData]);
+    const getData = async () => {
+      if (id) {
+        const stored = await getPDFWithAnnotations(id);
+        if (!stored) {
+          console.log('fetchPdfData');
+          const pdfData = await fetchPdfData(id);
+
+          if (!pdfData || !xfdf) return;
+
+          const saveToIndexedDB = async () => {
+            const response = await fetch(pdfData.url);
+            const blob = await response.blob();
+            savePDFWithAnnotations(pdfData._id, blob, pdfData.fileName, xfdf);
+            console.log('Saved to IndexDB');
+          };
+
+          saveToIndexedDB();
+        } else {
+          console.log('stored: ', stored);
+          // const blobUrl = URL.createObjectURL(stored.file);
+          setXfdf(stored.xfdf);
+          setPdfBlob(stored);
+        }
+      }
+    };
+    getData();
+  }, [id, fetchPdfData, xfdf]);
+
+  // useEffect(() => {
+  //   if (id) fetchPdfData(id);
+  // }, [id, fetchPdfData]);
 
   const toggleDownload = async () => {
     if (!pdfData) return;
@@ -245,13 +262,43 @@ const PdfViewer: React.FC = () => {
     };
   }, [instance]);
 
+  // Tự động lưu mỗi 10s
   useEffect(() => {
-    if (!viewerRef.current || !pdfData || webViewerInitialized.current) return;
+    const interval = setInterval(async () => {
+      if (pdfData && pdfData?.access !== 'View' && pdfData?.access !== 'Guest') {
+        // console.log('Post annotations');
+        await postAnnotations();
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [pdfData]);
+
+  useEffect(() => {
+    setSelectedAnnot(false);
+  }, [permissionPopup]);
+
+  useEffect(() => {
+    // console.log('Effect running!');
+    // console.log('pdfData:', pdfData);
+    // console.log('pdfUrl:', pdfBlob);
+    // console.log(
+    //   'Now1: ',
+    //   webViewerInitialized.current,
+    //   '  ',
+    //   !viewerRef.current,
+    //   '  ',
+    //   pdfBlob,
+    //   '  ',
+    //   !viewerRef.current || webViewerInitialized.current || pdfBlob,
+    // );
+    if (!viewerRef.current || webViewerInitialized.current || pdfBlob === null) return;
+    // console.log('Now: ', pdfData?.url, '  ', Boolean(!pdfBlob));
     WebViewer(
       {
         path: '/lib/webviewer',
         licenseKey: process.env.REACT_APP_LICENSE_KEY,
-        initialDoc: `${pdfData.url}`,
+        initialDoc: `${pdfData?.url ? pdfData.url : undefined}`,
         disabledElements: ['annotationPopup', 'annotationStylePopup', 'contextMenuPopup'],
       },
       viewerRef.current!,
@@ -260,6 +307,8 @@ const PdfViewer: React.FC = () => {
       setInstance(instance);
 
       instance.UI.setToolMode('Pan');
+
+      instance.UI.loadDocument(pdfBlob.file, { filename: 'myFile.pdf' });
 
       Object.values(instance.UI.hotkeys.Keys).forEach((key) => {
         if (key === 'p' || key === 'ctrl+z' || key === 'escape') {
@@ -299,7 +348,8 @@ const PdfViewer: React.FC = () => {
         }
       });
 
-      if (pdfData.access === 'Guest' || pdfData.access === 'View') instance.Core.annotationManager.enableReadOnlyMode();
+      if (pdfData?.access === 'Guest' || pdfData?.access === 'View')
+        instance.Core.annotationManager.enableReadOnlyMode();
 
       annotationManager.addEventListener('annotationChanged', async (annotations, action) => {
         if (action === 'add' || action === 'modify') console.log(annotations, ': ', action);
@@ -325,38 +375,7 @@ const PdfViewer: React.FC = () => {
 
       webViewerInitialized.current = true;
     });
-  }, [pdfData, zoomLevel]);
-
-  useEffect(() => {
-    socket.current?.on('msgToClient', (data) => {
-      console.log(Boolean(data.message), '   ', Boolean(isDocumentLoaded));
-      if (data.message && isDocumentLoaded) {
-        isImporting.current = true;
-        annotationManager.importAnnotations(data.message).then(() => {
-          isImporting.current = false;
-        });
-      }
-    });
-  }, [isDocumentLoaded, annotationManager, socket]);
-
-  // useEffect(() => {
-  //   const testConnection = async () => {
-  //     try {
-  //       const docRef = doc(db, 'test', 'ping');
-  //       const docSnap = await getDoc(docRef);
-
-  //       if (docSnap.exists()) {
-  //         console.log('✅ Kết nối Firestore thành công:', docSnap.data());
-  //       } else {
-  //         console.log('⚠️ Firestore OK, nhưng document không tồn tại');
-  //       }
-  //     } catch (error) {
-  //       console.error('❌ Lỗi kết nối Firestore:', error);
-  //     }
-  //   };
-
-  //   testConnection();
-  // }, []);
+  }, [pdfData, pdfBlob, xfdf, id, zoomLevel]);
 
   const handleMouseClick = (event: React.MouseEvent) => {
     if (!viewerRef.current) return;
@@ -414,6 +433,21 @@ const PdfViewer: React.FC = () => {
     };
   }, [zoomLevel]);
 
+  // Ngăn chặn zoom default
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
+
   const setZoom = (level: number) => {
     const boundedLevel = Math.max(50, Math.min(200, level));
     setZoomLevel(boundedLevel);
@@ -444,28 +478,13 @@ const PdfViewer: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      if (pdfData && pdfData?.access !== 'View' && pdfData?.access !== 'Guest') {
-        // console.log('Post annotations');
-        await postAnnotations();
-      }
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    setSelectedAnnot(false);
-  }, [permissionPopup]);
-
   if (fileStatus === 'Not found') {
     return <NotFoundLayout />;
   } else if (fileStatus === 'No permission') {
     return <NoPermission />;
   }
 
-  if ((token && !profile) || !pdfData) {
+  if ((token && !profile) || (!pdfData && !pdfBlob)) {
     return (
       <div
         style={{
@@ -494,14 +513,10 @@ const PdfViewer: React.FC = () => {
             icon={faArrowLeft}
             onClick={() => navigate(-1)}
           />
-          <h2>{pdfData.fileName}</h2>
+          <h2>{pdfData ? pdfData.fileName : pdfBlob?.fileName}</h2>
         </div>
 
         <div className={cx('right-header')}>
-          <button className={cx('button')} onClick={refreshPdf} disabled={isRefreshing}>
-            <FontAwesomeIcon icon={faSync} spin={isRefreshing} style={{ marginRight: '10px' }} />
-            {t('Refresh')}
-          </button>
           <button className={cx('button')} onClick={toggleDownload}>
             <FontAwesomeIcon style={{ marginRight: '10px' }} icon={faDownload} />
             {t('Download')}
@@ -591,7 +606,7 @@ const PdfViewer: React.FC = () => {
         </div>
 
         {/* Shape/Anno Controls */}
-        {pdfData.access !== 'View' && pdfData.access !== 'Guest' && (
+        {pdfData && pdfData.access !== 'View' && pdfData.access !== 'Guest' && (
           <div
             style={{
               position: 'absolute',
@@ -654,7 +669,7 @@ const PdfViewer: React.FC = () => {
         <PermissionBox access={pdfData?.access} setPermissionPopup={setPermissionPopup} pdfData={pdfData} />
       )}
 
-      {selectedAnnot && popupPosition && pdfData.access !== 'View' && pdfData.access !== 'Guest' && (
+      {selectedAnnot && popupPosition && pdfData && pdfData.access !== 'View' && pdfData.access !== 'Guest' && (
         <div
           style={{
             position: 'absolute',
