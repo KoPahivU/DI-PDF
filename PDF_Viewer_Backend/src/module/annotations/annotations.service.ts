@@ -49,8 +49,7 @@ export class AnnotationsService {
   }
 
   async findOne(fileId: string) {
-    const pdfId = new Types.ObjectId(fileId);
-    const annotation = await this.annotationModel.findById({ pdfId });
+    const annotation = await this.annotationModel.findOne({ pdfId: fileId });
 
     if (!annotation) throw new BadRequestException('Annotation not found!');
 

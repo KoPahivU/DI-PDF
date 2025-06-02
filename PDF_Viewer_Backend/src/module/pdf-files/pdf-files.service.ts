@@ -1,9 +1,8 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { CreatePdfFileDto } from './dto/create-pdf-file.dto.dto';
-import { UpdatePdfFileDto } from './dto/update-pdf-file.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { AccessLevel, PdfFile, SharedUser } from './schemas/pdf-file.schema';
-import { Model, ObjectId, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { User } from '../user/schemas/user.schema';
 import { CloudinaryService } from '@/common/cloudinary/cloudinary.service';
 import { UploadApiResponse } from 'cloudinary';
@@ -78,14 +77,44 @@ export class PdfFilesService {
     };
   }
 
+  async updateRecent(fileId: Types.ObjectId | string, userId: Types.ObjectId | string, file: any) {
+    const recentDoc = await this.recentDocumentModel.findOne({
+      fileId,
+      userId,
+    });
+    const newDate = new Date();
+
+    if (recentDoc) {
+      recentDoc.date = newDate.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+      await recentDoc.save();
+    } else {
+      await this.recentDocumentModel.create({
+        fileId: file._id.toString(),
+        userId: userId,
+        date: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+      });
+    }
+  }
+
   async getPdf(fileId: Types.ObjectId | string, userId: Types.ObjectId | string, shared: string | null) {
     const file = await this.pdfFileModel.findById(fileId);
 
     if (!file) throw new BadRequestException('File id not found');
 
+    const isOwner = file.ownerId === userId;
+
+    if (!isOwner && !file.isPublic) throw new BadRequestException('You have no permission');
+
+    let permission: string | undefined;
+    if (isOwner) permission = 'Owner';
+    else {
+      const sharedEntry = file.sharedWith.find((user) => user.userId.toString() === userId.toString());
+      permission = sharedEntry?.access;
+    }
+    if (permission === undefined && !shared) throw new BadRequestException('You have no permission');
+
     const cacheKey = fileId.toString();
     let annotation = await this.cacheManager.get(cacheKey);
-    console.log('New cache data');
 
     // Nếu cache không có, lấy từ DB
     if (!annotation) {
@@ -95,95 +124,54 @@ export class PdfFilesService {
         throw new BadRequestException('Annotation not found');
       }
 
-      const newCache = await this.cacheManager.set(cacheKey, annotation, 3600);
-      console.log('New cache data: ', newCache);
+      await this.cacheManager.set(cacheKey, annotation, 3600);
+      console.log('New cache data.');
     }
-
-    const isOwner = file.ownerId === userId;
-
-    if (!isOwner && !file.isPublic) throw new BadRequestException('You have no permission');
 
     const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
 
     const ownerInformation = await this.userModel.findById(file.ownerId);
 
-    if (userId) {
-      const recentDoc = await this.recentDocumentModel.findOne({
-        fileId: fileId,
-        userId,
-      });
-      const newDate = new Date();
-
-      if (recentDoc) {
-        recentDoc.date = newDate.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-        await recentDoc.save();
-      } else {
-        await this.recentDocumentModel.create({
-          fileId: file._id.toString(),
-          userId: userId,
-          date: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-        });
-      }
+    if (permission !== undefined) {
+      this.updateRecent(fileId, userId, file);
+      return {
+        file,
+        owner: {
+          gmail: ownerInformation?.gmail,
+          fullName: ownerInformation?.fullName,
+          avatar: ownerInformation?.avatar,
+        },
+        annotation,
+        access: isOwner ? 'Owner' : permission,
+      };
     }
 
     if (shared) {
       const sharedItem = file.sharedLink.find((link) => link.token === shared);
-      if (sharedItem) {
-        if (userId) {
-          const sharedUser = file.sharedWith.find((user) => {
-            return user.userId.equals(userObjectId);
+      if (!sharedItem) {
+        throw new BadRequestException('Shared not found');
+      }
+
+      let access = 'Guest';
+
+      if (userId) {
+        this.updateRecent(fileId, userId, file);
+        const sharedUserIndex = file.sharedWith.findIndex((user) => user.userId.equals(userObjectId));
+
+        if (sharedUserIndex !== -1) {
+          file.sharedWith[sharedUserIndex].access = sharedItem.access;
+        } else {
+          file.sharedWith.push({
+            userId: userObjectId,
+            access: sharedItem.access,
           });
-          if (sharedUser) {
-            sharedUser.access = sharedItem.access;
-          } else {
-            file.sharedWith.push({
-              userId: userObjectId,
-              access: sharedItem.access,
-            });
-          }
-
-          file.markModified('sharedWith');
-          await file.save();
-
-          return {
-            file: file,
-            owner: {
-              gmail: ownerInformation?.gmail,
-              fullName: ownerInformation?.fullName,
-              avatar: ownerInformation?.avatar,
-            },
-            annotation,
-            access: isOwner ? 'Owner' : sharedItem?.access,
-          };
         }
-        return {
-          file,
-          owner: {
-            gmail: ownerInformation?.gmail,
-            fullName: ownerInformation?.fullName,
-            avatar: ownerInformation?.avatar,
-          },
-          annotation,
-          access: 'Guest',
-        };
-      } else throw new BadRequestException('Shared not found');
-    }
 
-    if (userId) {
-      if (isOwner)
-        return {
-          file,
-          owner: {
-            gmail: ownerInformation?.gmail,
-            fullName: ownerInformation?.fullName,
-            avatar: ownerInformation?.avatar,
-          },
-          annotation,
-          access: 'Owner',
-        };
+        file.markModified('sharedWith');
+        await file.save();
 
-      const permission = file.sharedWith.find((user) => user.userId.toString() === userId.toString());
-      if (!permission) throw new BadRequestException('You have no permission');
+        access = isOwner ? 'Owner' : sharedItem.access;
+      }
 
       return {
         file,
@@ -193,7 +181,7 @@ export class PdfFilesService {
           avatar: ownerInformation?.avatar,
         },
         annotation,
-        access: permission.access,
+        access,
       };
     }
 
@@ -244,15 +232,12 @@ export class PdfFilesService {
 
     if (!file) throw new BadRequestException('File id not found');
 
-    const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
     const targetUserObjectId =
       typeof userPermission.userId === 'string' ? new Types.ObjectId(userPermission.userId) : userPermission.userId;
 
     const isOwner = file.ownerId === userId;
-    const permission = file.sharedWith.find((sharedUser) => sharedUser.userId.equals(userObjectId));
 
-    if ((!isOwner && permission?.access !== 'Edit') || !file.isPublic)
-      throw new BadRequestException('You have no permission');
+    if (!isOwner) throw new BadRequestException('You have no permission');
 
     return { file, targetUserObjectId };
   }
@@ -264,10 +249,11 @@ export class PdfFilesService {
 
     if (sharedUserIndex !== -1) {
       if (userPermission.access === 'Remove') {
-        await this.recentDocumentModel.deleteMany({
+        const deletedData = await this.recentDocumentModel.deleteOne({
           fileId: file._id.toString(),
           userId: userPermission.userId.toString(),
         });
+        console.log(deletedData);
         file.sharedWith.splice(sharedUserIndex, 1);
       } else {
         file.sharedWith[sharedUserIndex].access = userPermission.access;
@@ -354,15 +340,8 @@ export class PdfFilesService {
 
     if (!file) throw new BadRequestException('File id not found');
 
-    const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
     const isOwner = userId === file.ownerId;
-    const permission = file.sharedWith.find((sharedUser) => sharedUser.userId.equals(userObjectId));
-    if (
-      (!isOwner && permission?.access !== 'Edit') ||
-      userId === removeUser.userId ||
-      removeUser.userId === file.ownerId
-    )
-      throw new BadRequestException('You have no permission');
+    if (!isOwner || removeUser.userId === file.ownerId) throw new BadRequestException('You have no permission');
 
     const user = file.sharedWith.findIndex((remove) => remove.userId === removeUser.userId);
     if (user) {
@@ -381,8 +360,7 @@ export class PdfFilesService {
 
     const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
     const isOwner = userId === file.ownerId;
-    const permission = file.sharedWith.find((sharedUser) => sharedUser.userId.equals(userObjectId));
-    if (!isOwner && permission?.access !== 'Edit') throw new BadRequestException('You have no permission');
+    if (!isOwner) throw new BadRequestException('You have no permission');
 
     const link = file.sharedLink.findIndex((remove) => remove.token === removeLink.token);
     if (link) {
