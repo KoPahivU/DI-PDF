@@ -27,7 +27,6 @@ export function PermissionBox({
   const { t } = useTranslation('components/PermissionBox');
 
   const token = Cookies.get('DITokens');
-  console.log('pdf: ', pdfData);
   const [isPublic, setIsPublic] = useState<boolean>(pdfData?.isPublic || false);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -97,6 +96,12 @@ export function PermissionBox({
           sharedUser.map(async (item, index) => {
             const percent = ((index + 1) / sharedUser.length) * 100;
             setSaveProgress(percent);
+
+            console.log({
+              fileId: pdfData?._id,
+              userId: item.userId,
+              access: item.access,
+            });
             const res = await fetch(`${process.env.REACT_APP_BE_URI}/pdf-files/add-user-permission`, {
               method: 'POST',
               headers: {
@@ -134,6 +139,7 @@ export function PermissionBox({
         setTimeout(() => {
           setSaveSuccess(false);
           setPermissionPopup(false);
+          window.location.reload();
         }, 1000);
       }
     } catch (error) {

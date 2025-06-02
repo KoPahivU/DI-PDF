@@ -140,6 +140,7 @@
 
 .toggle-visbility {
   cursor: pointer;
+  color: #868686;
 }
 
 .accept-box {
@@ -147,6 +148,7 @@
   align-items: center;
   gap: 4px;
   cursor: pointer;
+  color: #484848;
 }
 
 .accept-box * {
@@ -169,9 +171,14 @@
   border-radius: 10px;
   color: white;
   cursor: pointer;
+  transition: transform 0.2s ease-in;
 
   &.disable {
     cursor: not-allowed;
+  }
+
+  &:active {
+    transform: scale(0.95);
   }
 }
 

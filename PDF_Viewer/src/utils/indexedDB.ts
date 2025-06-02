@@ -26,8 +26,19 @@ export const savePDFWithAnnotations = async (id: string, file: Blob, fileName: s
   await db.put(STORE_NAME, data, id); // dùng `id` làm key
 };
 
+export const updateXFDF = async (id: string, xfdf: string): Promise<void> => {
+  const db = await initDB();
+  const existing = await db.get(STORE_NAME, id);
+
+  if (!existing) {
+    throw new Error(`PDF with id "${id}" not found`);
+  }
+
+  const updated = { ...existing, xfdf };
+  await db.put(STORE_NAME, updated, id);
+};
+
 export const getPDFWithAnnotations = async (id: string): Promise<StoredPDFData | undefined> => {
   const db = await initDB();
   return db.get(STORE_NAME, id);
 };
-

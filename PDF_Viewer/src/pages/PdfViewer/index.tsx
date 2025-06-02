@@ -4,7 +4,14 @@ import classNames from 'classnames/bind';
 import Cookies from 'js-cookie';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faArrowUpFromBracket, faDownload, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
+import {
+  faArrowLeft,
+  faArrowUpFromBracket,
+  faCloud,
+  faDownload,
+  faMinus,
+  faPlus,
+} from '@fortawesome/free-solid-svg-icons';
 import { PermissionBox } from '../../components/PermissionBox';
 import { useAuth } from '../../layout/DashBoardLayout';
 import { Loading } from '../../components/Loading';
@@ -18,7 +25,7 @@ import { TextPop } from '~/components/Popup/TextPop';
 import { OnSave } from '~/components/Popup/OnSave';
 import { useTranslation } from 'react-i18next';
 import { io, Socket } from 'socket.io-client';
-import { getPDFWithAnnotations, savePDFWithAnnotations } from '~/utils/indexedDB';
+import { getPDFWithAnnotations, savePDFWithAnnotations, updateXFDF } from '~/utils/indexedDB';
 
 const cx = classNames.bind(styles);
 
@@ -143,7 +150,7 @@ const PdfViewer: React.FC = () => {
           _id: responseData.data.file._id,
           url: responseData.data.file.storagePath,
           ownerId: responseData.data.file.ownerId,
-          access: profile && profile._id === responseData.data.file.ownerId ? 'Owner' : responseData.data.access,
+          access: responseData.data.access,
           fileName: responseData.data.file.fileName,
           sharedLink: responseData.data.file.sharedLink,
           sharedWith: responseData.data.file.sharedWith,
@@ -151,13 +158,11 @@ const PdfViewer: React.FC = () => {
           updatedAt: responseData.data.file.updatedAt,
         };
 
-        // console.log(responseData);
-
+        setIsOwner(responseData.data.access === 'Owner');
         setXfdf(responseData.data.annotation.xfdf);
         setPdfData(newPdfData);
-        if (newPdfData.ownerId === profile?._id) setIsOwner(true);
 
-        return newPdfData;
+        return { newPdfData, xfdfData: responseData.data.annotation.xfdf };
       } catch (error) {
         console.error('Error fetching PDF:', error);
       }
@@ -170,12 +175,41 @@ const PdfViewer: React.FC = () => {
     if (xfdf && isDocumentLoaded && annotationManager) {
       annotationManager.importAnnotations(xfdf);
     }
-  }, [xfdf, isDocumentLoaded, annotationManager]);
+  }, [xfdf, isDocumentLoaded, annotationManager, pdfData]);
+
+  const getAnnotations = async () => {
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BE_URI}/annotations/${id}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.log('Error Response:', errorData);
+        throw new Error(errorData.message || 'Invalid credentials');
+      }
+
+      const responseData = await res.json();
+      console.log('getAnnotations: ', responseData);
+      setXfdf(responseData.data.xfdf);
+    } catch (error) {
+      console.error('postAnnotations error:', error);
+      return;
+    } finally {
+      setOnSave(false);
+    }
+  };
 
   const postAnnotations = async () => {
     try {
       setOnSave(true);
       const xfdfString = await annotationManagerRef.current?.exportAnnotations();
+      setXfdf(xfdfString);
+      if (id) updateXFDF(id, xfdfString);
+
       const res = await fetch(`${process.env.REACT_APP_BE_URI}/annotations`, {
         method: 'POST',
         headers: {
@@ -204,38 +238,56 @@ const PdfViewer: React.FC = () => {
     }
   };
 
+  const initialGetPdf = useRef(false);
+
   useEffect(() => {
+    if (initialGetPdf.current) return;
+
     const getData = async () => {
       if (id) {
+        const result = await fetchPdfData(id);
+
         const stored = await getPDFWithAnnotations(id);
         if (!stored) {
           console.log('fetchPdfData');
-          const pdfData = await fetchPdfData(id);
-
-          if (!pdfData || !xfdf) return;
-
+          if (!result) return;
+          const { newPdfData, xfdfData } = result;
           const saveToIndexedDB = async () => {
-            const response = await fetch(pdfData.url);
+            const response = await fetch(newPdfData.url);
             const blob = await response.blob();
-            savePDFWithAnnotations(pdfData._id, blob, pdfData.fileName, xfdf);
+            savePDFWithAnnotations(newPdfData._id, blob, newPdfData.fileName, xfdfData);
             console.log('Saved to IndexDB');
           };
 
           saveToIndexedDB();
         } else {
           console.log('stored: ', stored);
-          // const blobUrl = URL.createObjectURL(stored.file);
           setXfdf(stored.xfdf);
           setPdfBlob(stored);
+
+          // getAnnotations();
         }
       }
     };
     getData();
-  }, [id, fetchPdfData, xfdf]);
+    initialGetPdf.current = true;
+  }, [id, xfdf, instanceRef]);
 
-  // useEffect(() => {
-  //   if (id) fetchPdfData(id);
-  // }, [id, fetchPdfData]);
+  // Tự động lưu mỗi 10s
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (id && pdfData && pdfData?.access !== 'View' && pdfData?.access !== 'Guest') {
+        // console.log('Post annotations');
+        await postAnnotations();
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [pdfData]);
+
+  const handleSave = () => {
+    postAnnotations();
+  };
 
   const toggleDownload = async () => {
     if (!pdfData) return;
@@ -248,57 +300,20 @@ const PdfViewer: React.FC = () => {
   const webViewerInitialized = useRef(false);
 
   useEffect(() => {
-    if (!instance) return;
-
-    const onZoomUpdated = () => {
-      const zoom = instance.Core.documentViewer.getZoomLevel();
-      setZoomLevel(zoom * 100); // Convert to percent
-    };
-
-    instance.Core.documentViewer.addEventListener('zoomUpdated', onZoomUpdated);
-
-    return () => {
-      instance.Core.documentViewer.removeEventListener('zoomUpdated', onZoomUpdated);
-    };
-  }, [instance]);
-
-  // Tự động lưu mỗi 10s
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      if (pdfData && pdfData?.access !== 'View' && pdfData?.access !== 'Guest') {
-        // console.log('Post annotations');
-        await postAnnotations();
-      }
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, [pdfData]);
-
-  useEffect(() => {
     setSelectedAnnot(false);
   }, [permissionPopup]);
 
   useEffect(() => {
-    // console.log('Effect running!');
-    // console.log('pdfData:', pdfData);
-    // console.log('pdfUrl:', pdfBlob);
-    // console.log(
-    //   'Now1: ',
-    //   webViewerInitialized.current,
-    //   '  ',
-    //   !viewerRef.current,
-    //   '  ',
-    //   pdfBlob,
-    //   '  ',
-    //   !viewerRef.current || webViewerInitialized.current || pdfBlob,
-    // );
-    if (!viewerRef.current || webViewerInitialized.current || pdfBlob === null) return;
-    // console.log('Now: ', pdfData?.url, '  ', Boolean(!pdfBlob));
+    console.log(!viewerRef.current);
+    console.log(!pdfData, !pdfBlob, !pdfData && !pdfBlob);
+
+    if (!viewerRef.current || webViewerInitialized.current || !pdfData || !pdfBlob) return;
+
     WebViewer(
       {
         path: '/lib/webviewer',
         licenseKey: process.env.REACT_APP_LICENSE_KEY,
-        initialDoc: `${pdfData?.url ? pdfData.url : undefined}`,
+        // initialDoc: `${pdfData?.url}`,
         disabledElements: ['annotationPopup', 'annotationStylePopup', 'contextMenuPopup'],
       },
       viewerRef.current!,
@@ -307,8 +322,10 @@ const PdfViewer: React.FC = () => {
       setInstance(instance);
 
       instance.UI.setToolMode('Pan');
-
-      instance.UI.loadDocument(pdfBlob.file, { filename: 'myFile.pdf' });
+      console.log('pdfBlob: ', pdfBlob);
+      if (pdfBlob) {
+        instance.UI.loadDocument(pdfBlob.file, { filename: pdfBlob.fileName });
+      } else instance.UI.loadDocument(pdfData.url, { filename: pdfData.fileName });
 
       Object.values(instance.UI.hotkeys.Keys).forEach((key) => {
         if (key === 'p' || key === 'ctrl+z' || key === 'escape') {
@@ -351,10 +368,6 @@ const PdfViewer: React.FC = () => {
       if (pdfData?.access === 'Guest' || pdfData?.access === 'View')
         instance.Core.annotationManager.enableReadOnlyMode();
 
-      annotationManager.addEventListener('annotationChanged', async (annotations, action) => {
-        if (action === 'add' || action === 'modify') console.log(annotations, ': ', action);
-      });
-
       const topHeader = new instance.UI.Components.ModularHeader({
         dataElement: 'header',
         items: [],
@@ -375,7 +388,7 @@ const PdfViewer: React.FC = () => {
 
       webViewerInitialized.current = true;
     });
-  }, [pdfData, pdfBlob, xfdf, id, zoomLevel]);
+  }, [viewerRef, pdfData, pdfBlob, xfdf, id, zoomLevel]);
 
   const handleMouseClick = (event: React.MouseEvent) => {
     if (!viewerRef.current) return;
@@ -388,6 +401,21 @@ const PdfViewer: React.FC = () => {
 
     setPopupPosition({ x: relativeX, y: relativeY });
   };
+
+  useEffect(() => {
+    if (!instance) return;
+
+    const onZoomUpdated = () => {
+      const zoom = instance.Core.documentViewer.getZoomLevel();
+      setZoomLevel(zoom * 100); // Convert to percent
+    };
+
+    instance.Core.documentViewer.addEventListener('zoomUpdated', onZoomUpdated);
+
+    return () => {
+      instance.Core.documentViewer.removeEventListener('zoomUpdated', onZoomUpdated);
+    };
+  }, [instance]);
 
   useEffect(() => {
     const viewerEl = viewerRef.current;
@@ -517,6 +545,13 @@ const PdfViewer: React.FC = () => {
         </div>
 
         <div className={cx('right-header')}>
+          {pdfData?.access !== 'View' && pdfData?.access !== 'Guest' && (
+            <button className={cx('button')} onClick={handleSave}>
+              <FontAwesomeIcon style={{ marginRight: '10px' }} icon={faCloud} />
+              {t('Save')}
+            </button>
+          )}
+
           <button className={cx('button')} onClick={toggleDownload}>
             <FontAwesomeIcon style={{ marginRight: '10px' }} icon={faDownload} />
             {t('Download')}
@@ -570,7 +605,13 @@ const PdfViewer: React.FC = () => {
             gap: '10px',
           }}
         >
-          <button style={{ backgroundColor: 'white' }} onClick={zoomOut} disabled={zoomLevel === 50}>
+          <button
+            style={{
+              backgroundColor: 'white',
+            }}
+            onClick={zoomOut}
+            disabled={zoomLevel === 50}
+          >
             <FontAwesomeIcon
               icon={faMinus}
               style={{
@@ -578,7 +619,8 @@ const PdfViewer: React.FC = () => {
                 height: '15px',
                 padding: '5px',
                 border: '1px solid black',
-                cursor: 'pointer',
+                cursor: zoomLevel === 50 ? 'not-allowed' : 'pointer',
+                opacity: zoomLevel === 50 ? 0.6 : 1,
                 borderRadius: '50%',
               }}
             />
@@ -598,7 +640,8 @@ const PdfViewer: React.FC = () => {
                 height: '15px',
                 padding: '5px',
                 border: '1px solid black',
-                cursor: 'pointer',
+                cursor: zoomLevel === 200 ? 'not-allowed' : 'pointer',
+                opacity: zoomLevel === 200 ? 0.6 : 1,
                 borderRadius: '50%',
               }}
             />

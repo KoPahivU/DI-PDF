@@ -30,6 +30,7 @@
 }
 
 .left-header {
+  min-width: 295px;
   gap: 10px;
   display: flex;
   align-items: center;
@@ -47,6 +48,7 @@
 }
 
 .right-header {
+  min-width: 185px;
   gap: 10px;
   padding: 7px;
   background-color: #fcd965;

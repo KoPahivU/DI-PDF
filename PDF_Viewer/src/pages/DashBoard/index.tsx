@@ -361,7 +361,7 @@ function DashBoard() {
   }, [currentPage]);
 
   const isFirstRender = useRef(true);
-  console.log(token);
+  // console.log(token);
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -453,7 +453,7 @@ function DashBoard() {
         <DocsEmpty toggleDropdown={toggleDropdown} />
       ) : (
         <>
-          <TableContainer component={Paper}>
+          <TableContainer component={Paper} style={{ overflow: 'hidden' }}>
             <Table sx={{ minWidth: 700 }} aria-label="customized table">
               <TableHead>
                 <TableRow>

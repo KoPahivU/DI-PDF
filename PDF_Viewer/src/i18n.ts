@@ -36,7 +36,7 @@ i18n
       'pages/SignIn',
       'pages/SignUp',
     ],
-    debug: true,
+    debug: false,
     interpolation: {
       escapeValue: false,
     },

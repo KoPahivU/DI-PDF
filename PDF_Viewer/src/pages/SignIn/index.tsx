@@ -24,8 +24,6 @@ function SignIn() {
   const { t } = useTranslation('pages/SignIn');
 
   const navigate = useNavigate();
-  const token = Cookies.get('DITokens');
-  if (token) navigate('/');
 
   const [isLoading, setIsLoading] = useState(false);
   const [passwordVisbility, setPasswordVisbility] = useState(false);
@@ -175,6 +173,8 @@ function SignIn() {
             <h1 className={cx('symbol')}>*</h1>
           </div>
           <input
+            name="email"
+            autoComplete="email"
             ref={refs.emailRef}
             placeholder="Input email address"
             className={cx('input', { 'input-error': wrongEmailInput })}
@@ -189,6 +189,8 @@ function SignIn() {
           </div>
           <div className={cx('input', { 'input-error': wrongEmailInput })}>
             <input
+              name="password"
+              autoComplete="current-password"
               ref={refs.passwordRef}
               placeholder="Input password"
               className={cx('input-password')}

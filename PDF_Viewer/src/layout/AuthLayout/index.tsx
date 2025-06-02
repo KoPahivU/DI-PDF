@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import styles from './AuthLayout.module.scss';
 import classNames from 'classnames/bind';
 import Cookies from 'js-cookie';
@@ -11,14 +11,13 @@ interface AuthLayoutProps {
 }
 
 const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
-  const token = Cookies.get('DITokens');
   const navigate = useNavigate();
+  const token = Cookies.get('DITokens');
 
-  console.log(!(token === undefined));
-  console.log(token)
-
-  if (!(token === undefined)) navigate('/');
-
+  useEffect(() => {
+    if (token) navigate('/');
+  }, [token, navigate]);
+  
   return (
     <div>
       <img

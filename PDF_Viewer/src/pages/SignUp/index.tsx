@@ -26,8 +26,6 @@ function SignUp() {
   const { t } = useTranslation('pages/SignUp');
 
   const navigate = useNavigate();
-  const token = Cookies.get('DITokens');
-  if (token) navigate('/');
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -224,6 +222,7 @@ function SignUp() {
             <h1 className={cx('symbol')}>*</h1>
           </div>
           <input
+            name="email"
             ref={refs.email}
             placeholder="Input email address"
             className={cx('input', { 'input-error': wrongEmailInput })}

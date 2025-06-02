@@ -132,7 +132,17 @@ function Header() {
           </div>
         ) : (
           <div className={cx('right-header')}>
-            <span style={{ color: 'white', fontSize: '1.4rem' }}>
+            <span
+              style={{
+                color: 'white',
+                fontSize: '1.4rem',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: '100%',
+                display: 'inline-block',
+              }}
+            >
               {t('Good day')}, {profile?.fullName}
             </span>
             <img
