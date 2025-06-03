@@ -15,8 +15,7 @@ import { RecentDocument } from '../recent-document/schemas/recent-document.schem
 import { IsPublicDto } from './dto/is-public.dto';
 import { MailerService } from '@nestjs-modules/mailer';
 import { Annotation } from '../annotations/schemas/annotation.schema';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
+import Redis from 'ioredis';
 
 @Injectable()
 export class PdfFilesService {
@@ -31,7 +30,7 @@ export class PdfFilesService {
     private readonly recentDocumentModel: Model<RecentDocument>,
     private readonly cloudinaryService: CloudinaryService,
     private readonly mailerService: MailerService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @Inject('REDIS_CLIENT') private readonly redisClient: Redis,
   ) {}
 
   async uploadPdf(file: Express.Multer.File, userId: Types.ObjectId | string, fileSizeDto: CreatePdfFileDto) {
@@ -67,7 +66,7 @@ export class PdfFilesService {
       xfdf: xfdfDefault,
     });
 
-    const cached = await this.cacheManager.set(newPdfFile._id.toString(), newAnnotation, 120);
+    const cached = await this.redisClient.set(newPdfFile._id.toString(), JSON.stringify(newAnnotation), 'EX', 300);
     console.log('Annotation from cache:', cached);
 
     return {
@@ -114,7 +113,7 @@ export class PdfFilesService {
     if (permission === undefined && !shared) throw new BadRequestException('You have no permission');
 
     const cacheKey = fileId.toString();
-    let annotation = await this.cacheManager.get(cacheKey);
+    let annotation: string | null = await this.redisClient.get(cacheKey);
 
     // Nếu cache không có, lấy từ DB
     if (!annotation) {
@@ -124,13 +123,15 @@ export class PdfFilesService {
         throw new BadRequestException('Annotation not found');
       }
 
-      await this.cacheManager.set(cacheKey, annotation, 3600);
+      await this.redisClient.set(cacheKey, JSON.stringify(annotation), 'EX', 300);
       console.log('New cache data.');
     }
 
     const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
 
     const ownerInformation = await this.userModel.findById(file.ownerId);
+
+    if (typeof annotation === 'string') annotation = JSON.parse(annotation);
 
     if (permission !== undefined) {
       this.updateRecent(fileId, userId, file);
@@ -141,7 +142,7 @@ export class PdfFilesService {
           fullName: ownerInformation?.fullName,
           avatar: ownerInformation?.avatar,
         },
-        annotation,
+        annotation: annotation,
         access: isOwner ? 'Owner' : permission,
       };
     }

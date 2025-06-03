@@ -13,7 +13,6 @@ import {
 } from '@nestjs/common';
 import { PdfFilesService } from './pdf-files.service';
 import { CreatePdfFileDto } from './dto/create-pdf-file.dto.dto';
-import { UpdatePdfFileDto } from './dto/update-pdf-file.dto';
 import { diskStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AddUserPermissionDto } from './dto/add-user-permission.dto';

@@ -5,6 +5,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ResponseInterceptor } from './common/Interceptor/response.interceptor';
 import { useContainer } from 'class-validator';
 import * as bodyParser from 'body-parser';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -21,8 +22,15 @@ async function bootstrap() {
     }),
   );
 
-  app.use(bodyParser.json({ limit: '20mb' }));
-  app.use(bodyParser.urlencoded({ limit: '20mb', extended: true }));
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.REDIS,
+    options: {
+      host: 'localhost',
+      port: 6379,
+    },
+  });
+
+  await app.startAllMicroservices();
 
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 

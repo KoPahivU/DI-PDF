@@ -15,7 +15,7 @@ import { RecentDocumentModule } from './module/recent-document/recent-document.m
 import { AnnotationsModule } from './module/annotations/annotations.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { GateWayModule } from './common/gateway/gateway.module';
-
+import { RedisModule } from './common/redis/redis.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -58,6 +58,7 @@ import { GateWayModule } from './common/gateway/gateway.module';
     UserModule,
     AuthModule,
     CloudinaryModule,
+    RedisModule,
     PdfFilesModule,
     RecentDocumentModule,
     AnnotationsModule,

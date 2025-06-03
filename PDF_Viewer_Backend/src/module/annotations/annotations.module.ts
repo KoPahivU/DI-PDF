@@ -9,11 +9,15 @@ import { AuthController } from '@/auth/auth.controller';
 import { Annotation, AnnotationSchema } from './schemas/annotation.schema';
 import { UserModule } from '../user/user.module';
 import { CacheModule } from '@nestjs/cache-manager';
+import { PdfFilesModule } from '../pdf-files/pdf-files.module';
+import { RedisModule } from '@/common/redis/redis.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Annotation.name, schema: AnnotationSchema }]),
     forwardRef(() => UserModule),
+    forwardRef(() => PdfFilesModule),
+    RedisModule,
     CacheModule.register(),
   ],
   controllers: [AnnotationsController, AuthController],

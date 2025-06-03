@@ -1,33 +1,26 @@
+import { PdfFile } from './../pdf-files/schemas/pdf-file.schema';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { CreateAnnotationDto } from './dto/create-annotation.dto';
 import { Annotation } from './schemas/annotation.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
+import Redis from 'ioredis';
 @Injectable()
 export class AnnotationsService {
   constructor(
+    @InjectModel(PdfFile.name)
+    private pdfFileModel: Model<PdfFile>,
     @InjectModel(Annotation.name)
     private annotationModel: Model<Annotation>,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @Inject('REDIS_CLIENT') private readonly redisClient: Redis,
   ) {}
 
   async create(createAnnotationDto: CreateAnnotationDto) {
     const pdfId = new Types.ObjectId(createAnnotationDto.pdfId);
 
-    const cacheKey = createAnnotationDto.pdfId.toString();
+    const file = await this.pdfFileModel.findById(pdfId);
 
-    let annotationCache = await this.cacheManager.get<Annotation>(cacheKey);
-    if (!annotationCache) {
-      annotationCache = await this.annotationModel.findOne({ pdfId });
-
-      await this.cacheManager.set(cacheKey, annotationCache, 3600);
-      console.log('New cache data');
-    } else {
-      console.log('Update cache data');
-      await this.cacheManager.set(cacheKey, annotationCache, 3600);
-    }
+    if (!file) throw new BadRequestException('File not found');
 
     const annotation = await this.annotationModel.findOne({ pdfId });
 
@@ -37,6 +30,19 @@ export class AnnotationsService {
         pdfId: createAnnotationDto.pdfId,
         xfdf: xfdfDefault,
       });
+
+      const cacheKey = createAnnotationDto.pdfId.toString();
+
+      let annotationCache = await this.redisClient.get(cacheKey);
+      if (!annotationCache) {
+        const annotations = await this.annotationModel.findOne({ pdfId });
+        console.log('New cache data');
+        await this.redisClient.set(cacheKey, JSON.stringify(annotations), 'EX', 300);
+      } else {
+        console.log('Update cache data');
+        await this.redisClient.set(cacheKey, annotationCache, 'EX', 300);
+      }
+
       return {
         annotation,
       };
