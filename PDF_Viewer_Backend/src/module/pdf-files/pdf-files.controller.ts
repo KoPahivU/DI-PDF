@@ -12,7 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { PdfFilesService } from './pdf-files.service';
-import { CreatePdfFileDto } from './dto/create-pdf-file.dto.dto';
+import { CreatePdfFileDto } from './dto/create-pdf-file.dto';
 import { diskStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AddUserPermissionDto } from './dto/add-user-permission.dto';
@@ -21,7 +21,6 @@ import { DeleteUserPermissionDto } from './dto/delete-user-permisson.dto';
 import { Public } from '@/common/decorator/customize';
 import { IsPublicDto } from './dto/is-public.dto';
 import { DeleteLinkPermissionDto } from './dto/delete-link-permisson.dto';
-
 @Controller('pdf-files')
 export class PdfFilesController {
   constructor(private readonly pdfFilesService: PdfFilesService) {}

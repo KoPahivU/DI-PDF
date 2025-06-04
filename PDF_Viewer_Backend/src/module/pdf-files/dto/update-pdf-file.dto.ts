@@ -1,5 +1,5 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { CreatePdfFileDto } from './create-pdf-file.dto.dto';
+import { CreatePdfFileDto } from './create-pdf-file.dto';
 import { IsNotEmpty } from 'class-validator';
 import { ObjectId } from 'mongoose';
 

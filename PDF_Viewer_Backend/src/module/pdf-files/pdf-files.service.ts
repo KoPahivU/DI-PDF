@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { CreatePdfFileDto } from './dto/create-pdf-file.dto.dto';
+import { CreatePdfFileDto } from './dto/create-pdf-file.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { AccessLevel, PdfFile, SharedUser } from './schemas/pdf-file.schema';
+import { AccessLevel, FileType, PdfFile, SharedUser } from './schemas/pdf-file.schema';
 import { Model, Types } from 'mongoose';
 import { User } from '../user/schemas/user.schema';
 import { CloudinaryService } from '@/common/cloudinary/cloudinary.service';
@@ -16,6 +16,10 @@ import { IsPublicDto } from './dto/is-public.dto';
 import { MailerService } from '@nestjs-modules/mailer';
 import { Annotation } from '../annotations/schemas/annotation.schema';
 import Redis from 'ioredis';
+import axios from 'axios';
+import { storage } from 'firebase-admin';
+import { response } from 'express';
+import { error } from 'console';
 
 @Injectable()
 export class PdfFilesService {
@@ -38,19 +42,89 @@ export class PdfFilesService {
 
     if (!user) throw new BadRequestException('User not found!');
 
+    let storagePath: string = '';
     const newTotal = (Number(user.usedStorage) ?? 0) + Number(fileSizeDto.fileSize);
     if (newTotal > 1000000000) throw new BadRequestException('Out of memory!');
 
     await this.userModel.updateOne({ _id: userId }, { $set: { usedStorage: newTotal } });
 
     const cloudinaryResult: UploadApiResponse = await this.cloudinaryService.uploadPdf(file);
+    storagePath = cloudinaryResult.secure_url;
+
+    let type = fileSizeDto.type;
+
+    if (fileSizeDto.type === FileType.LUMIN) {
+      try {
+        const config = {
+          method: 'post',
+          maxBodyLength: Infinity,
+          url: 'https://api.luminpdf.com/v1/signature_request/send',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'x-api-key': process.env.LUMIN_API_KEY,
+          },
+          data: JSON.stringify({
+            file_url: storagePath,
+            title: fileSizeDto.fileName,
+            signers: [
+              {
+                email_address: process.env.TEST_MAIL_1,
+                name: 'Vu',
+                group: 1,
+              },
+            ],
+            viewers: [
+              {
+                email_address: process.env.TEST_MAIL_2,
+                name: 'Le Vu',
+              },
+            ],
+            expires_at: 1927510980694,
+            use_text_tags: false,
+            signing_type: 'ORDER',
+          }),
+        };
+        const luminResponse = await axios.request(config);
+
+        console.log(JSON.stringify(luminResponse.data));
+
+        const signatureId = luminResponse.data.signature_request.signature_request_id;
+
+        const configDownload = {
+          method: 'get',
+          maxBodyLength: Infinity,
+          url: `https://api.luminpdf.com/v1/signature_request/files_as_file_url/${signatureId}`,
+          headers: {
+            Accept: 'application/json',
+            'x-api-key': process.env.LUMIN_API_KEY,
+          },
+        };
+
+        const luminDownloadResponse = await axios.request(configDownload);
+        console.log(JSON.stringify(luminDownloadResponse.data));
+
+        if (luminDownloadResponse.data.file_url) {
+          storagePath = luminDownloadResponse.data.file_url;
+        }
+      } catch (error) {
+        type = FileType.DEFAULT;
+        console.error('LuminPDF API error:', error);
+
+        if (axios.isAxiosError(error)) {
+          console.error('Axios error response data:', error.response?.data);
+          console.error('Axios error status:', error.response?.status);
+          console.error('Axios error headers:', error.response?.headers);
+        }
+      }
+    }
 
     const newPdfFile = await this.pdfFileModel.create({
       fileName: fileSizeDto.fileName,
       fileSize: fileSizeDto.fileSize,
-      storagePath: cloudinaryResult.secure_url,
+      storagePath,
       ownerId: userId,
-      thumbnailUrl: '',
+      type,
     });
 
     const newRecent = await this.recentDocumentModel.create({
@@ -133,20 +207,6 @@ export class PdfFilesService {
 
     if (typeof annotation === 'string') annotation = JSON.parse(annotation);
 
-    if (permission !== undefined) {
-      this.updateRecent(fileId, userId, file);
-      return {
-        file,
-        owner: {
-          gmail: ownerInformation?.gmail,
-          fullName: ownerInformation?.fullName,
-          avatar: ownerInformation?.avatar,
-        },
-        annotation: annotation,
-        access: isOwner ? 'Owner' : permission,
-      };
-    }
-
     if (shared) {
       const sharedItem = file.sharedLink.find((link) => link.token === shared);
       if (!sharedItem) {
@@ -183,6 +243,20 @@ export class PdfFilesService {
         },
         annotation,
         access,
+      };
+    }
+
+    if (permission !== undefined) {
+      this.updateRecent(fileId, userId, file);
+      return {
+        file,
+        owner: {
+          gmail: ownerInformation?.gmail,
+          fullName: ownerInformation?.fullName,
+          avatar: ownerInformation?.avatar,
+        },
+        annotation: annotation,
+        access: isOwner ? 'Owner' : permission,
       };
     }
 

@@ -8,6 +8,11 @@ export enum AccessLevel {
   REMOVE = 'Remove',
 }
 
+export enum FileType {
+  DEFAULT = 'Default',
+  LUMIN = 'Lumin',
+}
+
 @Schema()
 export class SharedUser {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
@@ -41,7 +46,7 @@ export class PdfFile {
   storagePath: string;
 
   @Prop()
-  thumbnailUrl: string;
+  type: FileType;
 
   @Prop({ default: false })
   isPublic: boolean;
