@@ -45,12 +45,18 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   //   },
 }));
 
+enum FileType {
+  DEFAULT = 'Default',
+  LUMIN = 'Lumin',
+}
+
 interface fileData {
   filename: string;
   fileId: string;
   ownerName: string;
   ownerId: string;
   avatar: string;
+  type: FileType;
   date: string;
   time: string;
 }
@@ -58,6 +64,7 @@ interface fileData {
 function DashBoard() {
   const { t } = useTranslation('pages/DashBoard');
 
+  const token = Cookies.get('DITokens');
   const navigate = useNavigate();
   const profile = useAuth();
 
@@ -66,6 +73,7 @@ function DashBoard() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
 
   const [isDesc, setIsDesc] = useState<boolean>(true); //Mặc định từ gần tới xa
 
@@ -85,11 +93,11 @@ function DashBoard() {
 
   const [isDragging, setIsDragging] = useState(false);
 
+  const [type, setType] = useState<FileType>(FileType.DEFAULT);
+
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const [rows, setRows] = useState<fileData[]>([]);
-
-  const token = Cookies.get('DITokens');
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -124,9 +132,17 @@ function DashBoard() {
     setIsDragging(false);
   };
 
-  const toggleDropdown = () => {
+  const toggleDropdown = (e: React.MouseEvent, type: FileType) => {
+    const buttonRect = e.currentTarget.getBoundingClientRect();
+    setDropdownPosition({
+      top: buttonRect.bottom + window.scrollY,
+      left: buttonRect.left + window.scrollX,
+    });
     setDropdownOpen((prev) => !prev);
+    setType(type);
   };
+
+  // console.log('Current Type: ', type);
 
   const handleLocalClick = () => {
     inputRef.current?.click();
@@ -248,6 +264,7 @@ function DashBoard() {
     body.append('file', file);
     body.append('fileName', file.name);
     body.append('fileSize', file.size.toString());
+    body.append('type', type);
 
     const xhr = new XMLHttpRequest();
 
@@ -344,6 +361,7 @@ function DashBoard() {
           ownerName: data.user.fullName,
           ownerId: data.user._id,
           avatar: data.user.avatar,
+          type: data.pdf.type,
           date,
           time,
         };
@@ -399,6 +417,8 @@ function DashBoard() {
     };
   }, [isLoading, currentPage, pageCount]);
 
+  console.log(rows);
+
   return token ? (
     <div
       className={cx('wrapper')}
@@ -422,13 +442,40 @@ function DashBoard() {
             {t('Total')} {totalDocs}
           </span>
         </div>
-        <div className={cx('right-header')} onClick={toggleDropdown}>
-          <FontAwesomeIcon className={cx('upload')} icon={faArrowUpFromBracket} />
-          {t('Upload Document')}
+        <div className={cx('right-header')}>
+          <div
+            className={cx('upload')}
+            style={{ backgroundColor: '#EF3C5B' }}
+            onClick={(e) => toggleDropdown(e, FileType.LUMIN)}
+          >
+            <img
+              src="data:image/svg+xml,%3csvg width='113' height='113' viewBox='0 0 113 113' fill='none' xmlns='http://www.w3.org/2000/svg'%3e %3cg clip-path='url(%23clip0_173_7879)'%3e %3cpath d='M84.3267 0H28.6733C12.8375 0 0 12.8375 0 28.6733V84.3267C0 100.163 12.8375 113 28.6733 113H84.3267C100.163 113 113 100.163 113 84.3267V28.6733C113 12.8375 100.163 0 84.3267 0Z' fill='%23EF3C5B'/%3e %3cpath d='M54.1448 87.3609H54.1196C51.1987 87.3525 48.856 86.0701 47.5234 83.7484C44.7197 78.8662 46.6475 69.856 52.9336 58.168H27.3113C26.5653 58.168 25.8738 57.7698 25.5008 57.1203C25.1279 56.4707 25.1279 55.6744 25.5008 55.0291C37.6248 34.1423 50.9807 24.801 58.851 24.801H58.8762C61.7971 24.8094 64.1398 26.0918 65.4724 28.4135C68.2761 33.2957 66.3483 42.3059 60.058 53.9939H85.6887C86.4347 53.9939 87.1262 54.3921 87.4991 55.0416C87.8721 55.6912 87.8721 56.4875 87.4991 57.1328C75.3752 78.0196 62.015 87.3609 54.1448 87.3651V87.3609ZM57.7069 58.1721C50.3773 71.1049 49.4846 78.7782 51.1442 81.6698C51.5172 82.3194 52.2296 83.1785 54.128 83.1827H54.1448C60.4184 83.1827 71.7335 74.6126 81.9925 58.168H57.7027L57.7069 58.1721ZM31.0075 53.9939H55.2889C62.6185 41.057 63.5112 33.3879 61.8516 30.4963C61.4786 29.8467 60.7662 28.9876 58.8678 28.9834H58.851C52.5816 28.9834 41.2665 37.5535 31.0033 53.9939H31.0075Z' fill='white'/%3e %3c/g%3e %3cdefs%3e %3cclipPath id='clip0_173_7879'%3e %3crect width='113' height='113' fill='white'/%3e %3c/clipPath%3e %3c/defs%3e %3c/svg%3e"
+              alt="logo-default"
+              style={{ height: '24px', width: '24px', objectFit: 'cover' }}
+            />
+            {/* <FontAwesomeIcon icon={faArrowUpFromBracket} /> */}
+            {t('Upload Document')}
+          </div>
+          <div
+            className={cx('upload')}
+            style={{ backgroundColor: '#fcd965' }}
+            onClick={(e) => toggleDropdown(e, FileType.DEFAULT)}
+          >
+            <FontAwesomeIcon icon={faArrowUpFromBracket} />
+            {t('Upload Document')}
+          </div>
         </div>
 
         {dropdownOpen && (
-          <div ref={dropdownRef} className={cx('upload-dropdown')}>
+          <div
+            ref={dropdownRef}
+            className={cx('upload-dropdown')}
+            style={{
+              position: 'absolute',
+              top: `${dropdownPosition.top - 70}px`,
+              left: `${dropdownPosition.left - 30}px`,
+            }}
+          >
             <div className={cx('upload-option')} onClick={handleLocalClick}>
               📁 {t('From local file')}
             </div>
@@ -450,7 +497,7 @@ function DashBoard() {
 
       {/* Watch file */}
       {isNoDocs ? (
-        <DocsEmpty toggleDropdown={toggleDropdown} />
+        <DocsEmpty toggleDropdown={(e: React.MouseEvent) => toggleDropdown(e, FileType.DEFAULT)} />
       ) : (
         <>
           <TableContainer component={Paper} style={{ overflow: 'hidden' }}>
@@ -458,12 +505,12 @@ function DashBoard() {
               <TableHead>
                 <TableRow>
                   <StyledTableCell sx={{ width: '50%' }}>{t('File name')}</StyledTableCell>
-                  <StyledTableCell sx={{ width: '30%' }} align="left">
+                  <StyledTableCell sx={{ width: '35%' }} align="left">
                     {t('Document Owner')}
                   </StyledTableCell>
                   <StyledTableCell
-                    sx={{ width: '20%' }}
-                    align="center"
+                    sx={{ width: '15%' }}
+                    align="left"
                     style={{ cursor: 'pointer' }}
                     onClick={() => setIsDesc(!isDesc)}
                   >
@@ -477,12 +524,32 @@ function DashBoard() {
                   rows.map((row) => (
                     <StyledTableRow
                       key={row.fileId}
-                      style={{ cursor: 'pointer', width: '100%' }}
+                      style={{
+                        cursor: 'pointer',
+                        width: '100%',
+                        height: '72px',
+                      }}
                       className={cx('item')}
                       onClick={() => navigate(`/file/${row.fileId}`)}
                     >
                       <StyledTableCell component="th" scope="row">
-                        {row.filename}
+                        <div
+                          style={{
+                            color: row.type === FileType.LUMIN ? '#F2385A' : undefined,
+                            fontWeight: row.type === FileType.LUMIN ? '600' : '400',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          {row.filename}
+                          {row.type === FileType.LUMIN && (
+                            <img
+                              src="data:image/svg+xml,%3csvg width='113' height='113' viewBox='0 0 113 113' fill='none' xmlns='http://www.w3.org/2000/svg'%3e %3cg clip-path='url(%23clip0_173_7879)'%3e %3cpath d='M84.3267 0H28.6733C12.8375 0 0 12.8375 0 28.6733V84.3267C0 100.163 12.8375 113 28.6733 113H84.3267C100.163 113 113 100.163 113 84.3267V28.6733C113 12.8375 100.163 0 84.3267 0Z' fill='%23EF3C5B'/%3e %3cpath d='M54.1448 87.3609H54.1196C51.1987 87.3525 48.856 86.0701 47.5234 83.7484C44.7197 78.8662 46.6475 69.856 52.9336 58.168H27.3113C26.5653 58.168 25.8738 57.7698 25.5008 57.1203C25.1279 56.4707 25.1279 55.6744 25.5008 55.0291C37.6248 34.1423 50.9807 24.801 58.851 24.801H58.8762C61.7971 24.8094 64.1398 26.0918 65.4724 28.4135C68.2761 33.2957 66.3483 42.3059 60.058 53.9939H85.6887C86.4347 53.9939 87.1262 54.3921 87.4991 55.0416C87.8721 55.6912 87.8721 56.4875 87.4991 57.1328C75.3752 78.0196 62.015 87.3609 54.1448 87.3651V87.3609ZM57.7069 58.1721C50.3773 71.1049 49.4846 78.7782 51.1442 81.6698C51.5172 82.3194 52.2296 83.1785 54.128 83.1827H54.1448C60.4184 83.1827 71.7335 74.6126 81.9925 58.168H57.7027L57.7069 58.1721ZM31.0075 53.9939H55.2889C62.6185 41.057 63.5112 33.3879 61.8516 30.4963C61.4786 29.8467 60.7662 28.9876 58.8678 28.9834H58.851C52.5816 28.9834 41.2665 37.5535 31.0033 53.9939H31.0075Z' fill='white'/%3e %3c/g%3e %3cdefs%3e %3cclipPath id='clip0_173_7879'%3e %3crect width='113' height='113' fill='white'/%3e %3c/clipPath%3e %3c/defs%3e %3c/svg%3e"
+                              alt="logo-default"
+                              style={{ height: '20px', width: '20px', objectFit: 'cover', marginLeft: '5px' }}
+                            />
+                          )}
+                        </div>
                       </StyledTableCell>
                       <StyledTableCell align="left">
                         <div style={{ display: 'flex', alignItems: 'center' }}>

@@ -48,13 +48,18 @@
 }
 
 .right-header {
-  min-width: 185px;
-  gap: 10px;
-  padding: 7px;
-  background-color: #fcd965;
+  display: flex;
+  align-items: center;
+}
+
+.upload {
+  gap: 5px;
   color: white;
   border-radius: 10px;
-  margin-right: 10px;
+  margin-left: 10px;
+  padding: 7px;
+  display: flex;
+  align-items: center;
   cursor: pointer;
   transition: transform 0.1s ease-in-out, box-shadow 0.2s ease;
 
@@ -64,14 +69,10 @@
   }
 }
 
-.upload {
-  margin-right: 7px;
-}
-
 .upload-dropdown {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
+  // position: absolute;
+  // top: calc(100% + 10px);
+  // right: 0;
   background: white;
   border: 1px solid #ccc;
   border-radius: 12px;

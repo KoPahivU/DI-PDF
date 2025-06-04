@@ -25,7 +25,7 @@ import { TextPop } from '~/components/Popup/TextPop';
 import { OnSave } from '~/components/Popup/OnSave';
 import { useTranslation } from 'react-i18next';
 import { io, Socket } from 'socket.io-client';
-import { getPDFWithAnnotations, savePDFWithAnnotations, updateXFDF } from '~/utils/indexedDB';
+import { deletePDF, getPDFWithAnnotations, savePDFWithAnnotations, updateXFDF } from '~/utils/indexedDB';
 
 const cx = classNames.bind(styles);
 
@@ -124,51 +124,50 @@ const PdfViewer: React.FC = () => {
     });
   }, [isDocumentLoaded, annotationManager, socket]);
 
-  const fetchPdfData = useCallback(
-    async (pdfId: string) => {
-      try {
-        const res = await fetch(
-          `${process.env.REACT_APP_BE_URI}/pdf-files/${pdfId}${shared ? `?shared=${shared}` : ''}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
+  const fetchPdfData = async (pdfId: string) => {
+    try {
+      const res = await fetch(
+        `${process.env.REACT_APP_BE_URI}/pdf-files/${pdfId}${shared ? `?shared=${shared}` : ''}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
-        if (!res.ok) {
-          const errorData = await res.json();
-          console.log('Error Response:', errorData);
-          if (errorData.message === 'File id not found') {
-            setFileStatus('Not found');
-          } else {
-            setFileStatus('No permission');
-          }
-          throw new Error(errorData.message || 'Failed to fetch PDF');
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.log('Error Response:', errorData);
+        if (errorData.message === 'File id not found') {
+          setFileStatus('Not found');
+        } else {
+          setFileStatus('No permission');
+          if (id) deletePDF(id);
         }
-
-        const responseData = await res.json();
-        const newPdfData: PdfData = {
-          _id: responseData.data.file._id,
-          url: responseData.data.file.storagePath,
-          ownerId: responseData.data.file.ownerId,
-          access: responseData.data.access,
-          fileName: responseData.data.file.fileName,
-          sharedLink: responseData.data.file.sharedLink,
-          sharedWith: responseData.data.file.sharedWith,
-          isPublic: responseData.data.file.isPublic,
-          updatedAt: responseData.data.file.updatedAt,
-        };
-
-        setIsOwner(responseData.data.access === 'Owner');
-        setXfdf(responseData.data.annotation.xfdf);
-        setPdfData(newPdfData);
-
-        return { newPdfData, xfdfData: responseData.data.annotation.xfdf };
-      } catch (error) {
-        console.error('Error fetching PDF:', error);
+        throw new Error(errorData.message || 'Failed to fetch PDF');
       }
-    },
-    [profile, shared, token],
-  );
+
+      const responseData = await res.json();
+      const newPdfData: PdfData = {
+        _id: responseData.data.file._id,
+        url: responseData.data.file.storagePath,
+        ownerId: responseData.data.file.ownerId,
+        access: responseData.data.access,
+        fileName: responseData.data.file.fileName,
+        sharedLink: responseData.data.file.sharedLink,
+        sharedWith: responseData.data.file.sharedWith,
+        isPublic: responseData.data.file.isPublic,
+        updatedAt: responseData.data.file.updatedAt,
+      };
+
+      setIsOwner(responseData.data.access === 'Owner');
+      setXfdf(responseData.data.annotation.xfdf);
+      setPdfData(newPdfData);
+      console.log('New pdfData: ', newPdfData);
+
+      return { newPdfData, xfdfData: responseData.data.annotation.xfdf };
+    } catch (error) {
+      console.error('Error fetching PDF:', error);
+    }
+  };
 
   // Áp dụng annotations
   useEffect(() => {
@@ -177,31 +176,31 @@ const PdfViewer: React.FC = () => {
     }
   }, [xfdf, isDocumentLoaded, annotationManager, pdfData]);
 
-  const getAnnotations = async () => {
-    try {
-      const res = await fetch(`${process.env.REACT_APP_BE_URI}/annotations/${id}`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  // const getAnnotations = async () => {
+  //   try {
+  //     const res = await fetch(`${process.env.REACT_APP_BE_URI}/annotations/${id}`, {
+  //       method: 'GET',
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //     });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        console.log('Error Response:', errorData);
-        throw new Error(errorData.message || 'Invalid credentials');
-      }
+  //     if (!res.ok) {
+  //       const errorData = await res.json();
+  //       console.log('Error Response:', errorData);
+  //       throw new Error(errorData.message || 'Invalid credentials');
+  //     }
 
-      const responseData = await res.json();
-      console.log('getAnnotations: ', responseData);
-      setXfdf(responseData.data.xfdf);
-    } catch (error) {
-      console.error('postAnnotations error:', error);
-      return;
-    } finally {
-      setOnSave(false);
-    }
-  };
+  //     const responseData = await res.json();
+  //     console.log('getAnnotations: ', responseData);
+  //     setXfdf(responseData.data.xfdf);
+  //   } catch (error) {
+  //     console.error('postAnnotations error:', error);
+  //     return;
+  //   } finally {
+  //     setOnSave(false);
+  //   }
+  // };
 
   const postAnnotations = async () => {
     try {
@@ -247,7 +246,7 @@ const PdfViewer: React.FC = () => {
       if (id) {
         const result = await fetchPdfData(id);
 
-        const stored = await getPDFWithAnnotations(id);
+        let stored = await getPDFWithAnnotations(id);
         if (!stored) {
           console.log('fetchPdfData');
           if (!result) return;
@@ -259,8 +258,12 @@ const PdfViewer: React.FC = () => {
             console.log('Saved to IndexDB');
           };
 
-          saveToIndexedDB();
-        } else {
+          await saveToIndexedDB();
+
+          stored = await getPDFWithAnnotations(id);
+        }
+
+        if (stored) {
           console.log('stored: ', stored);
           setXfdf(stored.xfdf);
           setPdfBlob(stored);
@@ -304,9 +307,6 @@ const PdfViewer: React.FC = () => {
   }, [permissionPopup]);
 
   useEffect(() => {
-    console.log(!viewerRef.current);
-    console.log(!pdfData, !pdfBlob, !pdfData && !pdfBlob);
-
     if (!viewerRef.current || webViewerInitialized.current || !pdfData || !pdfBlob) return;
 
     WebViewer(
@@ -365,8 +365,10 @@ const PdfViewer: React.FC = () => {
         }
       });
 
-      if (pdfData?.access === 'Guest' || pdfData?.access === 'View')
+      if (pdfData?.access === 'Guest' || pdfData?.access === 'View') {
+        console.log('access', pdfData.access);
         instance.Core.annotationManager.enableReadOnlyMode();
+      }
 
       const topHeader = new instance.UI.Components.ModularHeader({
         dataElement: 'header',
@@ -618,7 +620,7 @@ const PdfViewer: React.FC = () => {
                 width: '15px',
                 height: '15px',
                 padding: '5px',
-                border: '1px solid black',
+                border: zoomLevel === 50 ? '1px solid #D4D4D4' : '1px solid black',
                 cursor: zoomLevel === 50 ? 'not-allowed' : 'pointer',
                 opacity: zoomLevel === 50 ? 0.6 : 1,
                 borderRadius: '50%',
@@ -639,7 +641,7 @@ const PdfViewer: React.FC = () => {
                 width: '15px',
                 height: '15px',
                 padding: '5px',
-                border: '1px solid black',
+                border: zoomLevel === 200 ? '1px solid #D4D4D4' : '1px solid black',
                 cursor: zoomLevel === 200 ? 'not-allowed' : 'pointer',
                 opacity: zoomLevel === 200 ? 0.6 : 1,
                 borderRadius: '50%',

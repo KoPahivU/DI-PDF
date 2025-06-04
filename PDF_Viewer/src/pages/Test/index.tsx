@@ -45,7 +45,7 @@ export function Test() {
   // }, []);
 
   // let data = JSON.stringify({
-  //   file_url: 'https://res.cloudinary.com/dgfmpovjz/raw/upload/v1748578533/ezw7wlid8evs6tidp2dk.pdf',
+  //   file_url: 'https://res.cloudinary.com/dgfmpovjz/raw/upload/v1748918520/m0ubp6q7d0irupvchk9l.pdf',
   //   title: 'Lab4-Report',
   //   signers: [
   //     {
@@ -93,6 +93,28 @@ export function Test() {
   //     method: 'get',
   //     maxBodyLength: Infinity,
   //     url: 'https://api.luminpdf.com/v1/signature_request/files/683d1619fe9901241c31d215',
+  //     headers: {
+  //       Accept: 'application/json',
+  //       'x-api-key': 'sffnh4rdwgzacy3s79y7igw36brdetox58a9202d12e041fbb3e6c07a2db062bd',
+  //     },
+  //   };
+
+  //   axios
+  //     .request(config)
+  //     .then((response) => {
+  //       console.log(typeof response.data);
+  //       console.log(JSON.stringify(response.data));
+  //     })
+  //     .catch((error) => {
+  //       console.error('API error:', error);
+  //     });
+  // }, []);
+
+  // useEffect(() => {
+  //   const config = {
+  //     method: 'get',
+  //     maxBodyLength: Infinity,
+  //     url: 'https://api.luminpdf.com/v1/signature_request/files_as_file_url/683d1619fe9901241c31d215',
   //     headers: {
   //       Accept: 'application/json',
   //       'x-api-key': 'sffnh4rdwgzacy3s79y7igw36brdetox58a9202d12e041fbb3e6c07a2db062bd',

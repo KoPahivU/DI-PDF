@@ -50,7 +50,6 @@ export function Shape({ instance }: { instance: WebViewerInstance | null }) {
 
     setSelectedShape(value);
     instance.UI.setToolMode(value);
-
     handleChooseColor(instance, selectedFillColor, selectedStrokeColor, value, strokeWidth, opacity);
   };
 
