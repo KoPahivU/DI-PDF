@@ -13,6 +13,7 @@ import { RecentDocumentModule } from '../recent-document/recent-document.module'
 import { AnnotationsModule } from '../annotations/annotations.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { RedisModule } from '@/common/redis/redis.module';
+import { EmailModule } from '@/mail/email.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { RedisModule } from '@/common/redis/redis.module';
     CloudinaryModule,
     RedisModule,
     CacheModule.register(),
+    EmailModule,
   ],
   controllers: [PdfFilesController, AuthController],
   providers: [PdfFilesService, AuthService, JwtStrategy, LocalStrategy],

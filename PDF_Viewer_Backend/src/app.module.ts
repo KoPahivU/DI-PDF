@@ -16,6 +16,8 @@ import { AnnotationsModule } from './module/annotations/annotations.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { GateWayModule } from './common/gateway/gateway.module';
 import { RedisModule } from './common/redis/redis.module';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { EmailModule } from './mail/email.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -53,6 +55,7 @@ import { RedisModule } from './common/redis/redis.module';
       }),
       inject: [ConfigService],
     }),
+    EmailModule,
     CacheModule.register(),
     GateWayModule,
     UserModule,

@@ -1,16 +1,16 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { Model } from 'mongoose';
 import bcrypt from 'bcrypt';
 import { InjectModel } from '@nestjs/mongoose';
 import { MailerService } from '@nestjs-modules/mailer';
-import { CreateUserDto } from '@/module/user/dto/create-user.dto';
 import { User } from '@/module/user/schemas/user.schema';
 import { UserService } from '@/module/user/user.service';
 import { comparePasswordHelper } from '@/common/helpers/util';
 import { LoginDto } from './dto/login.dto';
 import { GoogleUserDto } from './dto/google-user.dto';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class AuthService {
@@ -19,6 +19,7 @@ export class AuthService {
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private jwtService: JwtService,
     private readonly mailerService: MailerService,
+    @Inject('EMAIL_SERVICE') private client: ClientProxy,
   ) {}
 
   async validateUser(gmail: string, pass: string): Promise<User | null> {
@@ -77,23 +78,29 @@ export class AuthService {
       }
     }
 
-    this.mailerService.sendMail({
+    await this.client.emit('send_activation_email', {
       to: user.gmail,
-      subject: 'Activate your DI PDF account',
-      template: 'register',
-      context: {
-        url: process.env.FE_URI,
-        name: user?.fullName ?? user.gmail,
-        activationCode: user.codeId,
-      },
-      attachments: [
-        {
-          filename: 'logo.png',
-          path: process.cwd() + '/src/mail/assets/logo.png',
-          cid: 'logo',
-        },
-      ],
+      name: user.fullName ?? user.gmail,
+      code: user.codeId,
     });
+
+    // this.mailerService.sendMail({
+    //   to: user.gmail,
+    //   subject: 'Activate your DI PDF account',
+    //   template: 'register',
+    //   context: {
+    //     url: process.env.FE_URI,
+    //     name: user?.fullName ?? user.gmail,
+    //     activationCode: user.codeId,
+    //   },
+    //   attachments: [
+    //     {
+    //       filename: 'logo.png',
+    //       path: process.cwd() + '/src/mail/assets/logo.png',
+    //       cid: 'logo',
+    //     },
+    //   ],
+    // });
 
     return { user };
   };
@@ -127,8 +134,8 @@ export class AuthService {
       const token = this.jwtService.sign(payload);
 
       this.mailerService.sendMail({
-        to: user.gmail, // list of receivers
-        subject: 'Password Reset Request', // Subject line
+        to: user.gmail,
+        subject: 'Password Reset Request',
         template: 'forgot_password',
         context: {
           name: user.fullName,

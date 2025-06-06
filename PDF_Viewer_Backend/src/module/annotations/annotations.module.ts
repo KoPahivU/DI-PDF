@@ -11,6 +11,7 @@ import { UserModule } from '../user/user.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { PdfFilesModule } from '../pdf-files/pdf-files.module';
 import { RedisModule } from '@/common/redis/redis.module';
+import { EmailModule } from '@/mail/email.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { RedisModule } from '@/common/redis/redis.module';
     forwardRef(() => PdfFilesModule),
     RedisModule,
     CacheModule.register(),
+    EmailModule,
   ],
   controllers: [AnnotationsController, AuthController],
   providers: [AnnotationsService, AuthService, JwtStrategy, LocalStrategy],

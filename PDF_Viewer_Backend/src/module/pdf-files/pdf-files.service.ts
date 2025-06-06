@@ -17,9 +17,7 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { Annotation } from '../annotations/schemas/annotation.schema';
 import Redis from 'ioredis';
 import axios from 'axios';
-import { storage } from 'firebase-admin';
-import { response } from 'express';
-import { error } from 'console';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class PdfFilesService {
@@ -33,9 +31,22 @@ export class PdfFilesService {
     @InjectModel(RecentDocument.name)
     private readonly recentDocumentModel: Model<RecentDocument>,
     private readonly cloudinaryService: CloudinaryService,
-    private readonly mailerService: MailerService,
     @Inject('REDIS_CLIENT') private readonly redisClient: Redis,
+    @Inject('EMAIL_SERVICE') private client: ClientProxy,
   ) {}
+
+  getLuminFile(signedId: string) {
+    const configDownload = {
+      method: 'get',
+      maxBodyLength: Infinity,
+      url: `https://api.luminpdf.com/v1/signature_request/files_as_file_url/${signedId}`,
+      headers: {
+        Accept: 'application/json',
+        'x-api-key': process.env.LUMIN_API_KEY,
+      },
+    };
+    return configDownload;
+  }
 
   async uploadPdf(file: Express.Multer.File, userId: Types.ObjectId | string, fileSizeDto: CreatePdfFileDto) {
     const user = await this.userModel.findById(userId);
@@ -52,6 +63,7 @@ export class PdfFilesService {
     storagePath = cloudinaryResult.secure_url;
 
     let type = fileSizeDto.type;
+    let signedId: string | null = null;
 
     if (fileSizeDto.type === FileType.LUMIN) {
       try {
@@ -87,26 +99,14 @@ export class PdfFilesService {
         };
         const luminResponse = await axios.request(config);
 
-        console.log(JSON.stringify(luminResponse.data));
+        signedId = luminResponse.data.signature_request.signature_request_id;
 
-        const signatureId = luminResponse.data.signature_request.signature_request_id;
+        if (signedId === null) return;
 
-        const configDownload = {
-          method: 'get',
-          maxBodyLength: Infinity,
-          url: `https://api.luminpdf.com/v1/signature_request/files_as_file_url/${signatureId}`,
-          headers: {
-            Accept: 'application/json',
-            'x-api-key': process.env.LUMIN_API_KEY,
-          },
-        };
+        const configDownload = this.getLuminFile(signedId);
 
         const luminDownloadResponse = await axios.request(configDownload);
         console.log(JSON.stringify(luminDownloadResponse.data));
-
-        if (luminDownloadResponse.data.file_url) {
-          storagePath = luminDownloadResponse.data.file_url;
-        }
       } catch (error) {
         type = FileType.DEFAULT;
         console.error('LuminPDF API error:', error);
@@ -125,6 +125,7 @@ export class PdfFilesService {
       storagePath,
       ownerId: userId,
       type,
+      signedId,
     });
 
     const newRecent = await this.recentDocumentModel.create({
@@ -347,25 +348,27 @@ export class PdfFilesService {
 
       const user = await this.userModel.findById(userPermission.userId);
       const owner = await this.userModel.findById(userId);
-      this.mailerService.sendMail({
-        to: user?.gmail,
-        subject: 'DI-PDF Invite Email',
-        template: 'invite',
-        context: {
-          owner: owner?.fullName,
-          permission: userPermission.access,
-          fileName: file.fileName,
-          inviteName: user?.fullName,
-          url: `${process.env.FE_URI}/file/${file._id}`,
-        },
-        attachments: [
-          {
-            filename: 'logo.png',
-            path: process.cwd() + '/src/mail/assets/logo.png',
-            cid: 'logo',
-          },
-        ],
-      });
+
+      await this.client.emit('send_invitation', { user, owner, userPermission, file });
+      // this.mailerService.sendMail({
+      //   to: user?.gmail,
+      //   subject: 'DI-PDF Invite Email',
+      //   template: 'invite',
+      //   context: {
+      //     owner: owner?.fullName,
+      //     permission: userPermission.access,
+      //     fileName: file.fileName,
+      //     inviteName: user?.fullName,
+      //     url: `${process.env.FE_URI}/file/${file._id}`,
+      //   },
+      //   attachments: [
+      //     {
+      //       filename: 'logo.png',
+      //       path: process.cwd() + '/src/mail/assets/logo.png',
+      //       cid: 'logo',
+      //     },
+      //   ],
+      // });
     }
 
     file.markModified('sharedWith');

@@ -12,6 +12,7 @@ import { GoogleStrategy } from './passport/google.strategy';
 import { UserModule } from '@/module/user/user.module';
 import { User, UserSchema } from '@/module/user/schemas/user.schema';
 import { CloudinaryModule } from '@/common/cloudinary/cloudinary.module';
+import { EmailModule } from '@/mail/email.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { CloudinaryModule } from '@/common/cloudinary/cloudinary.module';
       }),
       inject: [ConfigService],
     }),
+    EmailModule,
     PassportModule,
     ConfigModule.forFeature(googleOauthConfig),
   ],

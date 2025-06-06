@@ -29,6 +29,15 @@ async function bootstrap() {
       port: 6379,
     },
   });
+  
+  app.connectMicroservice({
+    transport: Transport.RMQ,
+    options: {
+      urls: ['amqp://localhost:5672'],
+      queue: 'send_email',
+      queueOptions: { durable: false },
+    },
+  });
 
   await app.startAllMicroservices();
 

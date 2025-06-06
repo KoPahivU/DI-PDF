@@ -8,12 +8,14 @@ import { PdfFilesModule } from '../pdf-files/pdf-files.module';
 import { AuthService } from '@/auth/auth.service';
 import { JwtStrategy } from '@/auth/passport/jwt.strategy';
 import { LocalStrategy } from '@/auth/passport/local.strategy';
+import { EmailModule } from '@/mail/email.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: RecentDocument.name, schema: RecentDocumentSchema }]),
     forwardRef(() => UserModule),
     forwardRef(() => PdfFilesModule),
+    EmailModule,
   ],
   controllers: [RecentDocumentController],
   providers: [RecentDocumentService, AuthService, JwtStrategy, LocalStrategy],
