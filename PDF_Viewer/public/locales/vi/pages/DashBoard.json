@@ -2,11 +2,14 @@
   "Drag and drop PDF files here to upload": "Kéo và thả các tập tin PDF vào đây để tải lên",
   "Recent Document": "Các tài liệu gần đây",
   "Total": "Tổng",
-  "Upload Document": "Tải tập tin",
-  "From local file": "Từ cục bộ",
+  "Lumin Upload": "Tải lên Lumin",
+  "Default Upload": "Tải lên mặc định",
   "From Google Drive": "Từ Google Drive",
   "File name": "Tên tập tin",
   "Document Owner": "Chủ sở hữu tập tin",
   "Last Updated": "Cập nhật lần cuối",
-  "(You)": "(Bạn)"
+  "(You)": "(Bạn)",
+  "Please ensure the upload file is not more than 20MB and in .pdf format.": "Hãy đảm bảo file không quá 20MB và ở định dạng pdf.",
+  "Please ensure the upload file does not require any password.": "Hãy đảm bảo tài liệu tải lên không yêu cầu mật khẩu.",
+  "You have used up all 1GB of space.": "Bạn đã sử dụng hết 1GB dữ liệu."
 }

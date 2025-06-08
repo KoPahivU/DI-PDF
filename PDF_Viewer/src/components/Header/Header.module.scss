@@ -1,7 +1,7 @@
 .wrapper {
   position: fixed;
   background-color: #f5c731;
-  opacity: 0.8;
+  opacity: 0.9;
   height: 60px;
   width: 100%;
   z-index: 10;
@@ -66,51 +66,73 @@
 .dropdown {
   position: absolute;
   top: 70px;
-  right: 20px;
+  right: 30px;
   background-color: white;
   border: 1px solid #ccc;
   border-radius: 10px;
   z-index: 20;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  padding: 10px;
+  padding: 5px;
   display: flex;
   flex-direction: column;
-}
-
-.profile {
-  background: none;
-  border: none;
-  color: #333;
-  font-size: 1.4rem;
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 8px;
-  transition: background-color 0.2s;
 
   &:hover {
-    background-color: #eee;
+    .out-icon {
+      background-color: white;
+      color: #dd3232;
+    }
   }
-}
-
-.user-icon {
-  margin-right: 8px;
 }
 
 .logout {
+  padding: 4px 12px;
+  position: relative;
   background: none;
   border: none;
+  display: flex;
+  align-items: center;
   color: #b61616;
   font-size: 1.4rem;
   cursor: pointer;
-  padding: 8px 12px;
   border-radius: 8px;
-  transition: background-color 0.2s;
+  overflow: hidden;
+  z-index: 0;
+  transition: color 0.3s ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 200%;
+    height: 200%;
+    background-color: #dd3232;
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.4s ease;
+    z-index: -1;
+  }
+
+  &:hover::before {
+    transform: translate(-50%, -50%) scale(1);
+  }
 
   &:hover {
-    background-color: #eee;
+    color: #fff;
   }
 }
 
+.logout-text {
+  font-size: 1.7rem;
+  font-weight: 500;
+}
+
 .out-icon {
-  margin-right: 8px;
+  margin-right: 10px;
+  height: 13px;
+  width: 13px;
+  padding: 7px;
+  border-radius: 50%;
+  color: white;
+  background-color: #dd3232;
 }

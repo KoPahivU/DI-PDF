@@ -2,11 +2,15 @@
   "Drag and drop PDF files here to upload": "Drag and drop PDF files here to upload",
   "Recent Document": "Recent Document",
   "Total": "Total",
-  "Upload Document": "Upload Document",
+  "Lumin Upload": "Lumin Upload",
+  "Default Upload": "Default Upload",
   "From local file": "From local file",
   "From Google Drive": "From Google Drive",
   "File name": "File name",
   "Document Owner": "Document Owner",
   "Last Updated": "Last Updated",
-  "(You)": "(You)"
+  "(You)": "(You)",
+  "Please ensure the upload file is not more than 20MB and in .pdf format.": "Please ensure the upload file is not more than 20MB and in .pdf format.",
+  "Please ensure the upload file does not require any password.": "Please ensure the upload file does not require any password.",
+  "You have used up all 1GB of space.": "You have used up all 1GB of space."
 }

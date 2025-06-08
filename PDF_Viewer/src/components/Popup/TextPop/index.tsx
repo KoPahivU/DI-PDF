@@ -12,20 +12,25 @@ const cx = classNames.bind(styles);
 
 export function TextPop({ instance, selectedAnnot }: { instance: WebViewerInstance | null; selectedAnnot: any }) {
   const { t } = useTranslation('components/DropDown/Text');
-
   const [fontFamily, setFontFamily] = useState(selectedAnnot.Font);
-  const [fontSize, setFontSize] = useState(selectedAnnot.FontSize);
+  const [fontSize, setFontSize] = useState<string>(selectedAnnot.FontSize);
   const [selectedTextColor, setSelectedTextColor] = useState<Object>(toPlainColorObject(selectedAnnot.TextColor));
   const [selectedFillColor, setSelectedFillColor] = useState<Object>(toPlainColorObject(selectedAnnot.FillColor));
   const [selectedBorderColor, setSelectedBorderColor] = useState<Object>(toPlainColorObject(selectedAnnot.StrokeColor));
   const [borderWidth, setBorderWidth] = useState<number>(selectedAnnot.StrokeThickness);
   const [opacity, setOpacity] = useState<number>(selectedAnnot.Opacity * 100);
   const [selectedStyle, setSelectedStyle] = useState<'fill' | 'border'>('fill');
-  console.log('selectedAnnot', typeof selectedAnnot);
+
   useEffect(() => {
     if (!instance) return;
 
     const { annotationManager } = instance.Core;
+
+    const doc = instance.Core.documentViewer.getDocument();
+    const pageNumber = selectedAnnot.getPageNumber();
+    const pageInfo = doc.getPageInfo(pageNumber);
+    const pageMatrix = doc.getPageMatrix(pageNumber);
+    const pageRotation = doc.getPageRotation(pageNumber);
 
     selectedAnnot.Font = fontFamily;
     selectedAnnot.FontSize = fontSize;
@@ -35,6 +40,7 @@ export function TextPop({ instance, selectedAnnot }: { instance: WebViewerInstan
     selectedAnnot.StrokeThickness = borderWidth;
     selectedAnnot.Opacity = Number((opacity / 100).toFixed(2));
 
+    selectedAnnot.fitText(pageInfo, pageMatrix, pageRotation);
     annotationManager.redrawAnnotation(selectedAnnot);
   }, [
     instance,
@@ -79,12 +85,12 @@ export function TextPop({ instance, selectedAnnot }: { instance: WebViewerInstan
             id="font-size"
             className={cx('select-box')}
             value={fontSize}
-            onChange={(e) => setFontSize(Number(e.target.value))}
+            onChange={(e) => setFontSize(e.target.value)}
           >
             <optgroup label="Size">
               {Array.from({ length: 513 }, (_, i) => (
-                <option key={i} value={i}>
-                  {i} px
+                <option key={i} value={`${i}pt`}>
+                  {i} pt
                 </option>
               ))}
             </optgroup>
@@ -194,7 +200,7 @@ export function TextPop({ instance, selectedAnnot }: { instance: WebViewerInstan
       )}
 
       {/* Opacity */}
-      <span>{t('Opacity')}</span>
+      <span>{t('opacity')}</span>
       <div className={cx('opacity-slider')}>
         <div className={cx('opacity-track')}>
           <div className={cx('checkerboard')} />

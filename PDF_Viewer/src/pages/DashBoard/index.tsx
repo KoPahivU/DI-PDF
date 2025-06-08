@@ -22,6 +22,10 @@ import { useAuth } from '../../layout/DashBoardLayout';
 import { GuestDashboard } from '../../components/GuestDashboard';
 import { UploadProcess } from '../../components/Popup/UploadProcess';
 import { useTranslation } from 'react-i18next';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 const cx = classNames.bind(styles);
 
@@ -81,7 +85,6 @@ function DashBoard() {
 
   const [warningPopup, setWarningPopup] = useState(false);
   const [warning, setWarning] = useState<string>('');
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [successPopup, setSuccessPopup] = useState(false);
 
@@ -117,7 +120,7 @@ function DashBoard() {
     if (droppedFile) {
       // Kiểm tra kích thước và định dạng
       if (droppedFile.size > maxSize || droppedFile.type !== 'application/pdf') {
-        setWarning('Please ensure the upload file is not more than 20MB and in .pdf format.');
+        setWarning(t('Please ensure the upload file is not more than 20MB and in .pdf format.'));
         setWarningPopup(true);
         setTimeout(() => setWarningPopup(false), 2000);
         setFile(null);
@@ -132,14 +135,17 @@ function DashBoard() {
     setIsDragging(false);
   };
 
-  const toggleDropdown = (e: React.MouseEvent, type: FileType) => {
-    const buttonRect = e.currentTarget.getBoundingClientRect();
-    setDropdownPosition({
-      top: buttonRect.bottom + window.scrollY,
-      left: buttonRect.left + window.scrollX,
-    });
-    setDropdownOpen((prev) => !prev);
-    setType(type);
+  const toggleDropdown = (e: React.MouseEvent, fileType: FileType) => {
+    e.stopPropagation();
+
+    if (fileType === type) {
+      setDropdownOpen(false);
+    } else {
+      setDropdownOpen(true);
+      setType(fileType);
+    }
+    // setDropdownOpen((prev) => !prev);
+    // setType(type);
   };
 
   // console.log('Current Type: ', type);
@@ -183,7 +189,7 @@ function DashBoard() {
 
               if (!response.ok) {
                 setWarningPopup(true);
-                setWarning('Please ensure the upload file is not more than 20MB and in .pdf format.');
+                setWarning(t('Please ensure the upload file is not more than 20MB and in .pdf format.'));
                 setTimeout(() => {
                   setWarningPopup(false);
                 }, 2000);
@@ -203,7 +209,7 @@ function DashBoard() {
               setFile(null);
             }
           } else {
-            setWarning('Please ensure the upload file is not more than 20MB and in .pdf format.');
+            setWarning(t('Please ensure the upload file is not more than 20MB and in .pdf format.'));
             setWarningPopup(true);
             setTimeout(() => {
               setWarningPopup(false);
@@ -244,7 +250,7 @@ function DashBoard() {
 
     if (selectedFile) {
       if (selectedFile?.size > maxSize) {
-        setWarning('Please ensure the upload file is not more than 20MB and in .pdf format.');
+        setWarning(t('Please ensure the upload file is not more than 20MB and in .pdf format.'));
         setWarningPopup(true);
         setTimeout(() => {
           setWarningPopup(false);
@@ -257,8 +263,32 @@ function DashBoard() {
     }
   };
 
+  const checkPdfPassword = async (file: File): Promise<boolean> => {
+    const arrayBuffer = await file.arrayBuffer();
+
+    try {
+      await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      return false; // Không có password
+    } catch (err: any) {
+      if (err?.name === 'PasswordException') {
+        return true; // Có password
+      }
+      return false;
+    }
+  };
+  console.log(token);
+
   const uploadFile = async () => {
     if (!file) return;
+
+    const isHasPass = await checkPdfPassword(file);
+
+    if (isHasPass) {
+      setWarning(t('Please ensure the upload file does not require any password.'));
+      setWarningPopup(true);
+      setTimeout(() => setWarningPopup(false), 2000);
+      setFile(null);
+    }
 
     const body = new FormData();
     body.append('file', file);
@@ -270,10 +300,6 @@ function DashBoard() {
 
     xhr.upload.addEventListener('progress', (event) => {
       if (event.lengthComputable) {
-        const percent = Math.round((event.loaded / event.total) * 100);
-        if (percent > 90) {
-          setUploadProgress(90);
-        } else setUploadProgress(percent);
         setIsUploading(true);
       }
     });
@@ -288,13 +314,12 @@ function DashBoard() {
             window.location.reload();
           }, 1000);
           setFile(null);
-          setUploadProgress(0);
         } else {
           console.error('Upload failed:', xhr.responseText);
           const response = JSON.parse(xhr.responseText);
 
           if (response.message === 'Out of memory!') {
-            setWarning('You have used up all 1GB of space.');
+            setWarning(t('You have used up all 1GB of space.'));
             setWarningPopup(true);
             setTimeout(() => {
               setWarningPopup(false);
@@ -443,47 +468,58 @@ function DashBoard() {
           </span>
         </div>
         <div className={cx('right-header')}>
-          <div
-            className={cx('upload')}
-            style={{ backgroundColor: '#EF3C5B' }}
-            onClick={(e) => toggleDropdown(e, FileType.LUMIN)}
-          >
-            <img
-              src="data:image/svg+xml,%3csvg width='113' height='113' viewBox='0 0 113 113' fill='none' xmlns='http://www.w3.org/2000/svg'%3e %3cg clip-path='url(%23clip0_173_7879)'%3e %3cpath d='M84.3267 0H28.6733C12.8375 0 0 12.8375 0 28.6733V84.3267C0 100.163 12.8375 113 28.6733 113H84.3267C100.163 113 113 100.163 113 84.3267V28.6733C113 12.8375 100.163 0 84.3267 0Z' fill='%23EF3C5B'/%3e %3cpath d='M54.1448 87.3609H54.1196C51.1987 87.3525 48.856 86.0701 47.5234 83.7484C44.7197 78.8662 46.6475 69.856 52.9336 58.168H27.3113C26.5653 58.168 25.8738 57.7698 25.5008 57.1203C25.1279 56.4707 25.1279 55.6744 25.5008 55.0291C37.6248 34.1423 50.9807 24.801 58.851 24.801H58.8762C61.7971 24.8094 64.1398 26.0918 65.4724 28.4135C68.2761 33.2957 66.3483 42.3059 60.058 53.9939H85.6887C86.4347 53.9939 87.1262 54.3921 87.4991 55.0416C87.8721 55.6912 87.8721 56.4875 87.4991 57.1328C75.3752 78.0196 62.015 87.3609 54.1448 87.3651V87.3609ZM57.7069 58.1721C50.3773 71.1049 49.4846 78.7782 51.1442 81.6698C51.5172 82.3194 52.2296 83.1785 54.128 83.1827H54.1448C60.4184 83.1827 71.7335 74.6126 81.9925 58.168H57.7027L57.7069 58.1721ZM31.0075 53.9939H55.2889C62.6185 41.057 63.5112 33.3879 61.8516 30.4963C61.4786 29.8467 60.7662 28.9876 58.8678 28.9834H58.851C52.5816 28.9834 41.2665 37.5535 31.0033 53.9939H31.0075Z' fill='white'/%3e %3c/g%3e %3cdefs%3e %3cclipPath id='clip0_173_7879'%3e %3crect width='113' height='113' fill='white'/%3e %3c/clipPath%3e %3c/defs%3e %3c/svg%3e"
-              alt="logo-default"
-              style={{ height: '24px', width: '24px', objectFit: 'cover' }}
-            />
-            {/* <FontAwesomeIcon icon={faArrowUpFromBracket} /> */}
-            {t('Upload Document')}
+          {/* Lumin Upload */}
+          <div style={{ position: 'relative' }} className={cx('upload-container')}>
+            <div
+              className={cx('upload')}
+              data-color="#EF3C5B"
+              style={{ backgroundColor: '#EF3C5B' }}
+              onClick={(e) => toggleDropdown(e, FileType.LUMIN)}
+            >
+              <img
+                src="data:image/svg+xml,%3csvg width='113' height='113' viewBox='0 0 113 113' fill='none' xmlns='http://www.w3.org/2000/svg'%3e %3cg clip-path='url(%23clip0_173_7879)'%3e %3cpath d='M84.3267 0H28.6733C12.8375 0 0 12.8375 0 28.6733V84.3267C0 100.163 12.8375 113 28.6733 113H84.3267C100.163 113 113 100.163 113 84.3267V28.6733C113 12.8375 100.163 0 84.3267 0Z' fill='%23EF3C5B'/%3e %3cpath d='M54.1448 87.3609H54.1196C51.1987 87.3525 48.856 86.0701 47.5234 83.7484C44.7197 78.8662 46.6475 69.856 52.9336 58.168H27.3113C26.5653 58.168 25.8738 57.7698 25.5008 57.1203C25.1279 56.4707 25.1279 55.6744 25.5008 55.0291C37.6248 34.1423 50.9807 24.801 58.851 24.801H58.8762C61.7971 24.8094 64.1398 26.0918 65.4724 28.4135C68.2761 33.2957 66.3483 42.3059 60.058 53.9939H85.6887C86.4347 53.9939 87.1262 54.3921 87.4991 55.0416C87.8721 55.6912 87.8721 56.4875 87.4991 57.1328C75.3752 78.0196 62.015 87.3609 54.1448 87.3651V87.3609ZM57.7069 58.1721C50.3773 71.1049 49.4846 78.7782 51.1442 81.6698C51.5172 82.3194 52.2296 83.1785 54.128 83.1827H54.1448C60.4184 83.1827 71.7335 74.6126 81.9925 58.168H57.7027L57.7069 58.1721ZM31.0075 53.9939H55.2889C62.6185 41.057 63.5112 33.3879 61.8516 30.4963C61.4786 29.8467 60.7662 28.9876 58.8678 28.9834H58.851C52.5816 28.9834 41.2665 37.5535 31.0033 53.9939H31.0075Z' fill='white'/%3e %3c/g%3e %3cdefs%3e %3cclipPath id='clip0_173_7879'%3e %3crect width='113' height='113' fill='white'/%3e %3c/clipPath%3e %3c/defs%3e %3c/svg%3e"
+                alt="logo-default"
+                style={{ height: '24px', width: '24px', objectFit: 'cover' }}
+              />
+              {t('Lumin Upload')}
+            </div>
+
+            {dropdownOpen && type === FileType.LUMIN && (
+              <div ref={dropdownRef} className={cx('upload-dropdown')}>
+                <div className={cx('upload-option')} onClick={handleLocalClick}>
+                  📁 {t('From local file')}
+                </div>
+                <div className={cx('upload-option')} onClick={async () => await handleDriveClick()}>
+                  ☁️ {t('From Google Drive')}
+                </div>
+              </div>
+            )}
           </div>
-          <div
-            className={cx('upload')}
-            style={{ backgroundColor: '#fcd965' }}
-            onClick={(e) => toggleDropdown(e, FileType.DEFAULT)}
-          >
-            <FontAwesomeIcon icon={faArrowUpFromBracket} />
-            {t('Upload Document')}
+
+          {/* Default Upload */}
+          <div style={{ position: 'relative' }} className={cx('upload-container')}>
+            <div
+              className={cx('upload')}
+              data-color="#fcd965"
+              style={{ backgroundColor: '#fcd965' }}
+              onClick={(e) => toggleDropdown(e, FileType.DEFAULT)}
+            >
+              <FontAwesomeIcon icon={faArrowUpFromBracket} />
+              {t('Default Upload')}
+            </div>
+
+            {dropdownOpen && type === FileType.DEFAULT && (
+              <div ref={dropdownRef} className={cx('upload-dropdown')}>
+                <div className={cx('upload-option')} onClick={handleLocalClick}>
+                  📁 {t('From local file')}
+                </div>
+                <div className={cx('upload-option')} onClick={async () => await handleDriveClick()}>
+                  ☁️ {t('From Google Drive')}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-
-        {dropdownOpen && (
-          <div
-            ref={dropdownRef}
-            className={cx('upload-dropdown')}
-            style={{
-              position: 'absolute',
-              top: `${dropdownPosition.top - 70}px`,
-              left: `${dropdownPosition.left - 30}px`,
-            }}
-          >
-            <div className={cx('upload-option')} onClick={handleLocalClick}>
-              📁 {t('From local file')}
-            </div>
-            <div className={cx('upload-option')} onClick={async () => await handleDriveClick()}>
-              ☁️ {t('From Google Drive')}
-            </div>
-          </div>
-        )}
 
         <input
           ref={inputRef}
@@ -616,7 +652,7 @@ function DashBoard() {
 
       {warningPopup && <UploadWarning setWarningPopup={setWarningPopup} text={warning} />}
       {successPopup && <UploadSucess setSuccessPopup={setSuccessPopup} />}
-      {isUploading && <UploadProcess uploadProgress={uploadProgress} />}
+      {isUploading && <UploadProcess />}
     </div>
   ) : (
     <GuestDashboard />

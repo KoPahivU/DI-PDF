@@ -50,9 +50,17 @@
 .right-header {
   display: flex;
   align-items: center;
+  gap: 10px;
+}
+
+.upload-container {
+  overflow: visible;
+  position: relative;
 }
 
 .upload {
+  position: relative;
+  z-index: 1;
   gap: 5px;
   color: white;
   border-radius: 10px;
@@ -61,18 +69,56 @@
   display: flex;
   align-items: center;
   cursor: pointer;
+  background-color: #ef3c5b;
   transition: transform 0.1s ease-in-out, box-shadow 0.2s ease;
 
   &:active {
     transform: scale(0.96);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(100% + 2px);
+    height: calc(100% + 2px);
+    border: 2px solid rgba(161, 44, 44, 0.4);
+    border-radius: 12px;
+    transform: translate(-50%, -50%) scale(1);
+    transform-origin: center;
+    animation: rippleOutward 2.5s infinite ease-out;
+    pointer-events: none;
+    z-index: -1;
+    background-color: transparent;
+  }
+
+  &:hover::after {
+    animation: none;
+    opacity: 0;
+  }
+
+  &[data-color] {
+    color: attr(data-color color);
+  }
+}
+
+@keyframes rippleOutward {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0;
+  }
 }
 
 .upload-dropdown {
-  // position: absolute;
-  // top: calc(100% + 10px);
-  // right: 0;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
   background: white;
   border: 1px solid #ccc;
   border-radius: 12px;

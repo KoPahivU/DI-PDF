@@ -11,6 +11,8 @@ function Active() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const expiresAt = new Date(new Date().getTime() + 30 * 60 * 1000);
+
     if (codeId) {
       fetch(`${process.env.REACT_APP_BE_URI}/auth/verify-code?codeId=${codeId}`, {
         method: 'POST',
@@ -22,7 +24,9 @@ function Active() {
         .then((res) => res.json())
         .then((data) => {
           if (data.message === 'Success') {
-            Cookies.set('DITokens', data.data.access_token, { expires: 10 });
+            Cookies.set('DITokens', data.data.access_token, {
+              expires: expiresAt,
+            });
             navigate('/');
           } else {
             console.log('Error in else');
@@ -36,7 +40,7 @@ function Active() {
     }
 
     if (token) {
-      Cookies.set('DITokens', token, { expires: 10 });
+      Cookies.set('DITokens', token, { expires: expiresAt });
       navigate('/');
     }
   });

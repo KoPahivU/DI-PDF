@@ -21,10 +21,9 @@ const languages = [
 function Header() {
   const { t } = useTranslation('components/Header');
 
-  const token = Cookies.get('DITokens');
+  const [token, setToken] = useState<string | undefined>(Cookies.get('DITokens'));
   const profile = useAuth();
   const navigate = useNavigate();
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(i18n.language);
@@ -45,17 +44,52 @@ function Header() {
 
   const [hiddenBox, setHiddenBox] = useState<boolean>(false);
 
+  // useEffect(() => {
+  //   const handleClickOutside = (event: MouseEvent) => {
+  //     if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+  //       setHiddenBox(false);
+  //     }
+  //   };
+
+  //   document.addEventListener('mousedown', handleClickOutside);
+  //   return () => {
+  //     document.removeEventListener('mousedown', handleClickOutside);
+  //   };
+  // }, []);
+
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const languageRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
         setHiddenBox(false);
+      }
+
+      if (languageRef.current && !languageRef.current.contains(target)) {
+        setOpen(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Poll token from cookies
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const currentToken = Cookies.get('DITokens');
+      setToken((prevToken) => {
+        if (prevToken !== currentToken) {
+          return currentToken;
+        }
+        return prevToken;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -65,7 +99,7 @@ function Header() {
         <h1 className={cx('name')}>DI-PDF</h1>
       </div>
       <div className={cx('right-header')}>
-        <div style={{ position: 'relative', display: 'inline-block' }}>
+        <div ref={languageRef} style={{ position: 'relative', display: 'inline-block' }}>
           <div
             onClick={toggleOpen}
             style={{
@@ -156,14 +190,10 @@ function Header() {
               onClick={() => setHiddenBox(!hiddenBox)}
             />
             {hiddenBox && (
-              <div className={cx('dropdown')}>
-                <button className={cx('profile')} onClick={handleLogout}>
-                  <FontAwesomeIcon className={cx('user-icon')} icon={faUser} />
-                  {t('Profile')}
-                </button>
+              <div className={cx('dropdown')} ref={dropdownRef}>
                 <button className={cx('logout')} onClick={handleLogout}>
                   <FontAwesomeIcon className={cx('out-icon')} icon={faRightFromBracket} />
-                  {t('Logout')}
+                  <span className={cx('logout-text')}>{t('Logout')}</span>{' '}
                 </button>
               </div>
             )}

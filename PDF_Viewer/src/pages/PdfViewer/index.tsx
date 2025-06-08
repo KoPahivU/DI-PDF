@@ -5,9 +5,14 @@ import Cookies from 'js-cookie';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
+  faAngleLeft,
+  faAngleRight,
+  faAnglesLeft,
+  faAnglesRight,
   faArrowLeft,
   faArrowUpFromBracket,
   faCloud,
+  faCloudArrowUp,
   faDownload,
   faMinus,
   faPlus,
@@ -82,6 +87,8 @@ const PdfViewer: React.FC = () => {
 
   const instanceRef = useRef<any>(null);
   const [zoomLevel, setZoomLevel] = useState(100);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [dropDown, setDropDown] = useState<string | null>(null);
 
@@ -148,7 +155,7 @@ const PdfViewer: React.FC = () => {
       const responseData = await res.json();
       const newPdfData: PdfData = {
         _id: responseData.data.file._id,
-        url: responseData.data.file.storagePath,
+        url: responseData.data.url,
         ownerId: responseData.data.file.ownerId,
         access: responseData.data.access,
         fileName: responseData.data.file.fileName,
@@ -175,32 +182,6 @@ const PdfViewer: React.FC = () => {
       annotationManager.importAnnotations(xfdf);
     }
   }, [xfdf, isDocumentLoaded, annotationManager, pdfData]);
-
-  // const getAnnotations = async () => {
-  //   try {
-  //     const res = await fetch(`${process.env.REACT_APP_BE_URI}/annotations/${id}`, {
-  //       method: 'GET',
-  //       headers: {
-  //         Authorization: `Bearer ${token}`,
-  //       },
-  //     });
-
-  //     if (!res.ok) {
-  //       const errorData = await res.json();
-  //       console.log('Error Response:', errorData);
-  //       throw new Error(errorData.message || 'Invalid credentials');
-  //     }
-
-  //     const responseData = await res.json();
-  //     console.log('getAnnotations: ', responseData);
-  //     setXfdf(responseData.data.xfdf);
-  //   } catch (error) {
-  //     console.error('postAnnotations error:', error);
-  //     return;
-  //   } finally {
-  //     setOnSave(false);
-  //   }
-  // };
 
   const postAnnotations = async () => {
     try {
@@ -293,7 +274,7 @@ const PdfViewer: React.FC = () => {
   };
 
   const toggleDownload = async () => {
-    if (!pdfData) return;
+    if (!pdfData || !webViewerInitialized.current) return;
 
     if (instance) {
       instance.UI.downloadPdf({ filename: pdfData.fileName });
@@ -337,6 +318,8 @@ const PdfViewer: React.FC = () => {
       instance.Core.documentViewer.addEventListener('documentLoaded', () => {
         setIsDocumentLoaded(true);
         instance.UI.setZoomLevel(`${zoomLevel}%`);
+        instance.UI.setLayoutMode(instance.UI.LayoutMode.Single);
+        setTotalPages(instance?.Core.documentViewer.getPageCount());
       });
 
       const { annotationManager } = instance.Core;
@@ -393,15 +376,32 @@ const PdfViewer: React.FC = () => {
   }, [viewerRef, pdfData, pdfBlob, xfdf, id, zoomLevel]);
 
   const handleMouseClick = (event: React.MouseEvent) => {
-    if (!viewerRef.current) return;
+    const popupWidth = 300;
+    const popupHeight = 300;
 
-    const rect = viewerRef.current.getBoundingClientRect();
+    let x = event.clientX;
+    let y = event.clientY;
 
-    // Tính vị trí chuột tương đối so với container cha
-    const relativeX = event.clientX - rect.left;
-    const relativeY = event.clientY - rect.top + 70;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
 
-    setPopupPosition({ x: relativeX, y: relativeY });
+    // Điều chỉnh nếu popup bị tràn phải
+    if (x + popupWidth > windowWidth) {
+      x = windowWidth - popupWidth - 10; // chừa 10px
+    }
+
+    // Điều chỉnh nếu popup bị tràn xuống dưới
+    if (y + popupHeight > windowHeight) {
+      y = windowHeight - popupHeight - 10;
+    }
+
+    // Điều chỉnh nếu popup tràn lên trên
+    if (y < 0) y = 10;
+
+    // Điều chỉnh nếu popup tràn trái
+    if (x < 0) x = 10;
+
+    setPopupPosition({ x, y });
   };
 
   useEffect(() => {
@@ -479,6 +479,7 @@ const PdfViewer: React.FC = () => {
   }, []);
 
   const setZoom = (level: number) => {
+    if (!webViewerInitialized.current) return;
     const boundedLevel = Math.max(50, Math.min(200, level));
     setZoomLevel(boundedLevel);
     if (instanceRef.current) {
@@ -491,8 +492,10 @@ const PdfViewer: React.FC = () => {
   };
 
   const zoomIn = () => {
+    if (isDocumentLoaded === false) return;
+
     const currentIndex = ZOOM_LEVELS.findIndex((z) => z === zoomLevel);
-    if (currentIndex < ZOOM_LEVELS.length - 1) {
+    if (currentIndex < ZOOM_LEVELS.length - 1 && webViewerInitialized.current === true) {
       const newLevel = ZOOM_LEVELS[currentIndex + 1];
       setZoomLevel(newLevel);
       instanceRef.current?.UI.setZoomLevel(`${newLevel}%`);
@@ -500,11 +503,39 @@ const PdfViewer: React.FC = () => {
   };
 
   const zoomOut = () => {
-    const currentIndex = ZOOM_LEVELS.findIndex((z) => z === zoomLevel);
+    if (isDocumentLoaded === false) return;
+
+    const currentIndex = ZOOM_LEVELS.findIndex((z) => z === zoomLevel && webViewerInitialized.current === true);
     if (currentIndex > 0) {
       const newLevel = ZOOM_LEVELS[currentIndex - 1];
       setZoomLevel(newLevel);
       instanceRef.current?.UI.setZoomLevel(`${newLevel}%`);
+    }
+  };
+
+  useEffect(() => {
+    const viewer = instanceRef.current?.Core.documentViewer;
+    if (!viewer) return;
+
+    const updatePageInfo = () => {
+      setCurrentPage(viewer.getCurrentPage());
+      setTotalPages(viewer.getPageCount());
+    };
+
+    viewer.addEventListener('pageNumberUpdated', updatePageInfo);
+    viewer.addEventListener('documentLoaded', updatePageInfo);
+
+    return () => {
+      viewer.removeEventListener('pageNumberUpdated', updatePageInfo);
+      viewer.removeEventListener('documentLoaded', updatePageInfo);
+    };
+  }, [instanceRef]);
+
+  const goToPage = (page: number) => {
+    if (!instance && !isDocumentLoaded) return;
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      instance?.Core.documentViewer.setCurrentPage(page, true);
     }
   };
 
@@ -548,8 +579,12 @@ const PdfViewer: React.FC = () => {
 
         <div className={cx('right-header')}>
           {pdfData?.access !== 'View' && pdfData?.access !== 'Guest' && (
-            <button className={cx('button')} onClick={handleSave}>
-              <FontAwesomeIcon style={{ marginRight: '10px' }} icon={faCloud} />
+            <button className={cx('button', 'button-save', { saving: onSave })} onClick={handleSave}>
+              <FontAwesomeIcon
+                className={cx('save-icon')}
+                icon={onSave ? faCloudArrowUp : faCloud}
+                style={{ marginRight: '10px' }}
+              />
               {t('Save')}
             </button>
           )}
@@ -566,149 +601,219 @@ const PdfViewer: React.FC = () => {
           )}
         </div>
       </div>
+
       <div
         style={{
-          position: 'relative',
-          height: 'calc(100vh - 160px)',
-          width: 'calc(100vw - 50px)',
-          margin: '10px',
-          borderRadius: '20px',
-          backgroundColor: '#fff',
-          boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)',
-          overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column',
-          border: '1px solid #E4E4E4',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: 'calc(100vh - 160px)',
+          width: '100vw',
+          boxSizing: 'border-box',
+          margin: '20px 0',
         }}
       >
-        {/* Scrollable PDF Viewer Area */}
-        <div
-          ref={viewerRef}
-          style={{
-            flex: 1,
-            overflowY: 'hidden',
-          }}
-          onClick={handleMouseClick}
-        >
-          {/* Render PDF pages here */}
-        </div>
-
-        {/* Fixed Zoom Controls */}
         <div
           style={{
-            zIndex: 10,
-            background: '#fff',
-            padding: '6px 12px',
-            borderRadius: '12px',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+            width: 'calc(100vw - 60px)',
+            position: 'relative',
+            height: '100%',
+            margin: '10px 15px',
+            borderRadius: '20px',
+            backgroundColor: '#fff',
+            boxShadow: '0 0 10px rgba(0, 0, 0, 0.4)',
+            overflow: 'hidden',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '10px',
+            flexDirection: 'column',
+            border: '1px solid #E4E4E4',
           }}
         >
-          <button
-            style={{
-              backgroundColor: 'white',
-            }}
-            onClick={zoomOut}
-            disabled={zoomLevel === 50}
-          >
-            <FontAwesomeIcon
-              icon={faMinus}
-              style={{
-                width: '15px',
-                height: '15px',
-                padding: '5px',
-                border: zoomLevel === 50 ? '1px solid #D4D4D4' : '1px solid black',
-                cursor: zoomLevel === 50 ? 'not-allowed' : 'pointer',
-                opacity: zoomLevel === 50 ? 0.6 : 1,
-                borderRadius: '50%',
-              }}
-            />
-          </button>
-          <select style={{ padding: '5px', border: 'white' }} value={zoomLevel.toString()} onChange={handleZoomChange}>
-            {ZOOM_LEVELS.map((level) => (
-              <option key={level} value={level.toString()}>
-                {level}%
-              </option>
-            ))}
-          </select>
-          <button style={{ backgroundColor: 'white' }} onClick={zoomIn} disabled={zoomLevel === 200}>
-            <FontAwesomeIcon
-              icon={faPlus}
-              style={{
-                width: '15px',
-                height: '15px',
-                padding: '5px',
-                border: zoomLevel === 200 ? '1px solid #D4D4D4' : '1px solid black',
-                cursor: zoomLevel === 200 ? 'not-allowed' : 'pointer',
-                opacity: zoomLevel === 200 ? 0.6 : 1,
-                borderRadius: '50%',
-              }}
-            />
-          </button>
-        </div>
-
-        {/* Shape/Anno Controls */}
-        {pdfData && pdfData.access !== 'View' && pdfData.access !== 'Guest' && (
+          {/* Scrollable PDF Viewer Area */}
           <div
+            ref={viewerRef}
             style={{
-              position: 'absolute',
-              bottom: '50px',
-              right: '20px',
-              zIndex: 20, // Đảm bảo hiển thị trên nội dung khác
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              background: '#fff',
-              padding: '8px',
-              borderRadius: '10px',
-              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+              flex: 1,
+              overflowY: 'hidden',
             }}
+            onClick={handleMouseClick}
           >
-            <button
-              className={cx('annotation-button', { choose: dropDown === 'shape' })}
-              onClick={() => {
-                setDropDown((prev) => (prev === 'shape' ? null : 'shape'));
-              }}
-            >
-              <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M1.54286 2V12H16.4571V2H1.54286ZM0 1.97727C0 1.1614 0.680295 0.5 1.51948 0.5H16.4805C17.3197 0.5 18 1.1614 18 1.97727V12.0227C18 12.8386 17.3197 13.5 16.4805 13.5H1.51948C0.680295 13.5 0 12.8386 0 12.0227V1.97727Z"
-                  fill="#1E1E1E"
-                />
-              </svg>
-              <span>{t('Shape')}</span>
-            </button>
-
-            <span>|</span>
-
-            <button
-              className={cx('annotation-button', { choose: dropDown === 'text' })}
-              onClick={() => {
-                if (instance) {
-                  setDropDown((prev) => (prev === 'text' ? null : 'text'));
-                  instance.UI.setToolMode('AnnotationCreateFreeText');
-                }
-              }}
-            >
-              <svg width="20" height="16" viewBox="0 0 20 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M20 1.25V4.25C20 4.44891 19.921 4.63968 19.7803 4.78033C19.6397 4.92098 19.4489 5 19.25 5C19.0511 5 18.8603 4.92098 18.7197 4.78033C18.579 4.63968 18.5 4.44891 18.5 4.25V2H13.25V14H15.5C15.6989 14 15.8897 14.079 16.0303 14.2197C16.171 14.3603 16.25 14.5511 16.25 14.75C16.25 14.9489 16.171 15.1397 16.0303 15.2803C15.8897 15.421 15.6989 15.5 15.5 15.5H9.5C9.30109 15.5 9.11032 15.421 8.96967 15.2803C8.82902 15.1397 8.75 14.9489 8.75 14.75C8.75 14.5511 8.82902 14.3603 8.96967 14.2197C9.11032 14.079 9.30109 14 9.5 14H11.75V2H6.5V4.25C6.5 4.44891 6.42098 4.63968 6.28033 4.78033C6.13968 4.92098 5.94891 5 5.75 5C5.55109 5 5.36032 4.92098 5.21967 4.78033C5.07902 4.63968 5 4.44891 5 4.25V1.25C5 1.05109 5.07902 0.860322 5.21967 0.71967C5.36032 0.579018 5.55109 0.5 5.75 0.5H19.25C19.4489 0.5 19.6397 0.579018 19.7803 0.71967C19.921 0.860322 20 1.05109 20 1.25Z"
-                  fill="#1E1E1E"
-                />
-                <path
-                  d="M6 9.5C6 9.69891 5.92098 9.88968 5.78033 10.0303C5.63968 10.171 5.44891 10.25 5.25 10.25H3.75V11.75C3.75 11.9489 3.67098 12.1397 3.53033 12.2803C3.38968 12.421 3.19891 12.5 3 12.5C2.80109 12.5 2.61032 12.421 2.46967 12.2803C2.32902 12.1397 2.25 11.9489 2.25 11.75V10.25H0.75C0.551088 10.25 0.360323 10.171 0.21967 10.0303C0.079018 9.88968 0 9.69891 0 9.5C0 9.30109 0.079018 9.11032 0.21967 8.96967C0.360323 8.82902 0.551088 8.75 0.75 8.75H2.25V7.25C2.25 7.05109 2.32902 6.86032 2.46967 6.71967C2.61032 6.57902 2.80109 6.5 3 6.5C3.19891 6.5 3.38968 6.57902 3.53033 6.71967C3.67098 6.86032 3.75 7.05109 3.75 7.25V8.75H5.25C5.44891 8.75 5.63968 8.82902 5.78033 8.96967C5.92098 9.11032 6 9.30109 6 9.5Z"
-                  fill="#1E1E1E"
-                />
-              </svg>
-              <span>{t('Type')}</span>
-            </button>
-            {dropDown === 'shape' && <Shape instance={instance} />}
-            {dropDown === 'text' && <Text instance={instance} />}
+            {/* Render PDF pages here */}
           </div>
-        )}
+
+          <div>
+            <div
+              style={{
+                zIndex: 10,
+                background: '#fff',
+                padding: '6px 16px',
+                borderRadius: '12px',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+              }}
+            >
+              <div className={cx('zoomControls')}>
+                {/* Zoom Out */}
+                <button
+                  onClick={zoomOut}
+                  disabled={zoomLevel === 50}
+                  className={cx('zoomButton')}
+                  aria-label="Zoom out"
+                >
+                  <FontAwesomeIcon icon={faMinus} className={cx('zoomIcon')} />
+                </button>
+
+                {/* Zoom Level Dropdown */}
+                <select
+                  className={cx('zoomSelect')}
+                  value={zoomLevel.toString()}
+                  onChange={handleZoomChange}
+                  aria-label="Zoom level"
+                >
+                  {ZOOM_LEVELS.map((level) => (
+                    <option key={level} value={level.toString()}>
+                      {level}%
+                    </option>
+                  ))}
+                </select>
+
+                {/* Zoom In */}
+                <button onClick={zoomIn} disabled={zoomLevel === 200} className={cx('zoomButton')} aria-label="Zoom in">
+                  <FontAwesomeIcon icon={faPlus} className={cx('zoomIcon')} />
+                </button>
+              </div>
+
+              <div className={cx('pagination')}>
+                {/* First Page */}
+                <button
+                  onClick={() => goToPage(1)}
+                  disabled={currentPage === 1}
+                  className={cx('paginationButton')}
+                  aria-label="First page"
+                >
+                  <FontAwesomeIcon icon={faAnglesLeft} className={cx('paginationIcon')} />
+                </button>
+
+                {/* Previous Page */}
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={cx('paginationButton')}
+                  aria-label="Previous page"
+                >
+                  <FontAwesomeIcon icon={faAngleLeft} className={cx('paginationIcon')} />
+                </button>
+
+                {/* Page Number Input */}
+                <div className={cx('pageInputContainer')}>
+                  <input
+                    type="number"
+                    min={1}
+                    max={totalPages}
+                    value={currentPage}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      if (!isNaN(val)) {
+                        setCurrentPage(Math.max(1, Math.min(totalPages, val)));
+                      }
+                    }}
+                    onBlur={() => goToPage(currentPage)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        goToPage(currentPage);
+                      }
+                    }}
+                    className={cx('pageInput')}
+                    aria-label="Current page number"
+                  />
+                  <span className={cx('totalPages')}>/ {totalPages}</span>
+                </div>
+
+                {/* Next Page */}
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={cx('paginationButton')}
+                  aria-label="Next page"
+                >
+                  <FontAwesomeIcon icon={faAngleRight} className={cx('paginationIcon')} />
+                </button>
+
+                {/* Last Page */}
+                <button
+                  onClick={() => goToPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className={cx('paginationButton')}
+                  aria-label="Last page"
+                >
+                  <FontAwesomeIcon icon={faAnglesRight} className={cx('paginationIcon')} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Shape/Anno Controls */}
+          {pdfData && pdfData.access !== 'View' && pdfData.access !== 'Guest' && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '60px',
+                right: '20px',
+                zIndex: 20,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: '#fff',
+                padding: '8px',
+                borderRadius: '10px',
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+              }}
+            >
+              <button
+                className={cx('annotation-button', { choose: dropDown === 'shape' })}
+                onClick={() => {
+                  setDropDown((prev) => (prev === 'shape' ? null : 'shape'));
+                }}
+              >
+                <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M1.54286 2V12H16.4571V2H1.54286ZM0 1.97727C0 1.1614 0.680295 0.5 1.51948 0.5H16.4805C17.3197 0.5 18 1.1614 18 1.97727V12.0227C18 12.8386 17.3197 13.5 16.4805 13.5H1.51948C0.680295 13.5 0 12.8386 0 12.0227V1.97727Z"
+                    fill="#1E1E1E"
+                  />
+                </svg>
+                <span>{t('Shape')}</span>
+              </button>
+
+              <span>|</span>
+
+              <button
+                className={cx('annotation-button', { choose: dropDown === 'text' })}
+                onClick={() => {
+                  if (instance) {
+                    setDropDown((prev) => (prev === 'text' ? null : 'text'));
+                    instance.UI.setToolMode('AnnotationCreateFreeText');
+                  }
+                }}
+              >
+                <svg width="20" height="16" viewBox="0 0 20 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M20 1.25V4.25C20 4.44891 19.921 4.63968 19.7803 4.78033C19.6397 4.92098 19.4489 5 19.25 5C19.0511 5 18.8603 4.92098 18.7197 4.78033C18.579 4.63968 18.5 4.44891 18.5 4.25V2H13.25V14H15.5C15.6989 14 15.8897 14.079 16.0303 14.2197C16.171 14.3603 16.25 14.5511 16.25 14.75C16.25 14.9489 16.171 15.1397 16.0303 15.2803C15.8897 15.421 15.6989 15.5 15.5 15.5H9.5C9.30109 15.5 9.11032 15.421 8.96967 15.2803C8.82902 15.1397 8.75 14.9489 8.75 14.75C8.75 14.5511 8.82902 14.3603 8.96967 14.2197C9.11032 14.079 9.30109 14 9.5 14H11.75V2H6.5V4.25C6.5 4.44891 6.42098 4.63968 6.28033 4.78033C6.13968 4.92098 5.94891 5 5.75 5C5.55109 5 5.36032 4.92098 5.21967 4.78033C5.07902 4.63968 5 4.44891 5 4.25V1.25C5 1.05109 5.07902 0.860322 5.21967 0.71967C5.36032 0.579018 5.55109 0.5 5.75 0.5H19.25C19.4489 0.5 19.6397 0.579018 19.7803 0.71967C19.921 0.860322 20 1.05109 20 1.25Z"
+                    fill="#1E1E1E"
+                  />
+                  <path
+                    d="M6 9.5C6 9.69891 5.92098 9.88968 5.78033 10.0303C5.63968 10.171 5.44891 10.25 5.25 10.25H3.75V11.75C3.75 11.9489 3.67098 12.1397 3.53033 12.2803C3.38968 12.421 3.19891 12.5 3 12.5C2.80109 12.5 2.61032 12.421 2.46967 12.2803C2.32902 12.1397 2.25 11.9489 2.25 11.75V10.25H0.75C0.551088 10.25 0.360323 10.171 0.21967 10.0303C0.079018 9.88968 0 9.69891 0 9.5C0 9.30109 0.079018 9.11032 0.21967 8.96967C0.360323 8.82902 0.551088 8.75 0.75 8.75H2.25V7.25C2.25 7.05109 2.32902 6.86032 2.46967 6.71967C2.61032 6.57902 2.80109 6.5 3 6.5C3.19891 6.5 3.38968 6.57902 3.53033 6.71967C3.67098 6.86032 3.75 7.05109 3.75 7.25V8.75H5.25C5.44891 8.75 5.63968 8.82902 5.78033 8.96967C5.92098 9.11032 6 9.30109 6 9.5Z"
+                    fill="#1E1E1E"
+                  />
+                </svg>
+                <span>{t('Type')}</span>
+              </button>
+              {dropDown === 'shape' && <Shape instance={instance} />}
+              {dropDown === 'text' && <Text instance={instance} />}
+            </div>
+          )}
+        </div>
       </div>
       {permissionPopup && (
         <PermissionBox access={pdfData?.access} setPermissionPopup={setPermissionPopup} pdfData={pdfData} />
@@ -717,10 +822,13 @@ const PdfViewer: React.FC = () => {
       {selectedAnnot && popupPosition && pdfData && pdfData.access !== 'View' && pdfData.access !== 'Guest' && (
         <div
           style={{
-            position: 'absolute',
-            top: popupPosition.y,
-            left: popupPosition.x,
+            position: 'fixed', // 🔥 đổi từ 'absolute' thành 'fixed' để khớp với clientX/clientY
+            top: popupPosition.y - 50,
+            left: popupPosition.x - 50,
+            backgroundColor: '#fff',
             zIndex: 1001,
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+            borderRadius: '10px',
             padding: '10px',
           }}
         >
