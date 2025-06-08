@@ -13,11 +13,11 @@ import { DeleteUserPermissionDto } from './dto/delete-user-permisson.dto';
 import { DeleteLinkPermissionDto } from './dto/delete-link-permisson.dto';
 import { RecentDocument } from '../recent-document/schemas/recent-document.schema';
 import { IsPublicDto } from './dto/is-public.dto';
-import { MailerService } from '@nestjs-modules/mailer';
 import { Annotation } from '../annotations/schemas/annotation.schema';
 import Redis from 'ioredis';
 import axios from 'axios';
 import { ClientProxy } from '@nestjs/microservices';
+import { AwsService } from '@/aws/aws.service';
 
 @Injectable()
 export class PdfFilesService {
@@ -33,9 +33,10 @@ export class PdfFilesService {
     private readonly cloudinaryService: CloudinaryService,
     @Inject('REDIS_CLIENT') private readonly redisClient: Redis,
     @Inject('EMAIL_SERVICE') private client: ClientProxy,
+    private readonly awsService: AwsService,
   ) {}
 
-  getLuminFile(signedId: string) {
+  async getLuminFile(signedId: string) {
     const configDownload = {
       method: 'get',
       maxBodyLength: Infinity,
@@ -45,7 +46,9 @@ export class PdfFilesService {
         'x-api-key': process.env.LUMIN_API_KEY,
       },
     };
-    return configDownload;
+    const luminDownloadResponse = await axios.request(configDownload);
+    console.log(JSON.stringify(luminDownloadResponse.data));
+    return luminDownloadResponse.data.file_url;
   }
 
   async uploadPdf(file: Express.Multer.File, userId: Types.ObjectId | string, fileSizeDto: CreatePdfFileDto) {
@@ -53,17 +56,23 @@ export class PdfFilesService {
 
     if (!user) throw new BadRequestException('User not found!');
 
+    console.log(file.buffer);
+
     let storagePath: string = '';
     const newTotal = (Number(user.usedStorage) ?? 0) + Number(fileSizeDto.fileSize);
     if (newTotal > 1000000000) throw new BadRequestException('Out of memory!');
 
     await this.userModel.updateOne({ _id: userId }, { $set: { usedStorage: newTotal } });
 
-    const cloudinaryResult: UploadApiResponse = await this.cloudinaryService.uploadPdf(file);
-    storagePath = cloudinaryResult.secure_url;
+    const fileKey = `pdfs/${Date.now()}-${file.originalname}`;
+    const presignedUrl = await this.awsService.uploadFileAndGetPresignedUrl(fileKey, file.buffer, file.mimetype, 3600);
+
+    // const cloudinaryResult: UploadApiResponse = await this.cloudinaryService.uploadPdf(file);
+    // storagePath = cloudinaryResult.secure_url;
+
+    storagePath = fileKey;
 
     let type = fileSizeDto.type;
-    let signedId: string | null = null;
 
     if (fileSizeDto.type === FileType.LUMIN) {
       try {
@@ -77,7 +86,7 @@ export class PdfFilesService {
             'x-api-key': process.env.LUMIN_API_KEY,
           },
           data: JSON.stringify({
-            file_url: storagePath,
+            file_url: presignedUrl,
             title: fileSizeDto.fileName,
             signers: [
               {
@@ -99,16 +108,10 @@ export class PdfFilesService {
         };
         const luminResponse = await axios.request(config);
 
-        signedId = luminResponse.data.signature_request.signature_request_id;
-
-        if (signedId === null) return;
-
-        const configDownload = this.getLuminFile(signedId);
-
-        const luminDownloadResponse = await axios.request(configDownload);
-        console.log(JSON.stringify(luminDownloadResponse.data));
+        storagePath = luminResponse.data.signature_request.signature_request_id;
       } catch (error) {
         type = FileType.DEFAULT;
+        storagePath = fileKey;
         console.error('LuminPDF API error:', error);
 
         if (axios.isAxiosError(error)) {
@@ -125,7 +128,6 @@ export class PdfFilesService {
       storagePath,
       ownerId: userId,
       type,
-      signedId,
     });
 
     const newRecent = await this.recentDocumentModel.create({
@@ -208,6 +210,11 @@ export class PdfFilesService {
 
     if (typeof annotation === 'string') annotation = JSON.parse(annotation);
 
+    let presignedUrl: string | null;
+
+    if (file.type === FileType.DEFAULT) presignedUrl = await this.awsService.getPresignedUrl(file.storagePath, 3600);
+    else presignedUrl = await this.getLuminFile(file.storagePath);
+
     if (shared) {
       const sharedItem = file.sharedLink.find((link) => link.token === shared);
       if (!sharedItem) {
@@ -244,6 +251,7 @@ export class PdfFilesService {
         },
         annotation,
         access,
+        url: presignedUrl,
       };
     }
 
@@ -258,6 +266,7 @@ export class PdfFilesService {
         },
         annotation: annotation,
         access: isOwner ? 'Owner' : permission,
+        url: presignedUrl,
       };
     }
 
@@ -329,12 +338,13 @@ export class PdfFilesService {
           fileId: file._id.toString(),
           userId: userPermission.userId.toString(),
         });
-        console.log(deletedData);
         file.sharedWith.splice(sharedUserIndex, 1);
       } else {
         file.sharedWith[sharedUserIndex].access = userPermission.access;
       }
     } else {
+      if (userPermission.access === 'Remove') return;
+
       const newData = {
         userId: targetUserObjectId,
         access: userPermission.access,
@@ -350,25 +360,6 @@ export class PdfFilesService {
       const owner = await this.userModel.findById(userId);
 
       await this.client.emit('send_invitation', { user, owner, userPermission, file });
-      // this.mailerService.sendMail({
-      //   to: user?.gmail,
-      //   subject: 'DI-PDF Invite Email',
-      //   template: 'invite',
-      //   context: {
-      //     owner: owner?.fullName,
-      //     permission: userPermission.access,
-      //     fileName: file.fileName,
-      //     inviteName: user?.fullName,
-      //     url: `${process.env.FE_URI}/file/${file._id}`,
-      //   },
-      //   attachments: [
-      //     {
-      //       filename: 'logo.png',
-      //       path: process.cwd() + '/src/mail/assets/logo.png',
-      //       cid: 'logo',
-      //     },
-      //   ],
-      // });
     }
 
     file.markModified('sharedWith');

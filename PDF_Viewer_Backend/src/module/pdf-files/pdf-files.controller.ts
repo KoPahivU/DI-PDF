@@ -28,18 +28,18 @@ export class PdfFilesController {
   @Post('upload')
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: {
-        fileSize: 20 * 1024 * 1024,
-      },
-      storage: diskStorage({
-        filename: (req, file, cb) => {
-          cb(null, file.originalname);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        console.log(`Uploading file: ${file.filename}, size limit: 20MB`);
-        cb(null, true);
-      },
+      // limits: {
+      //   fileSize: 20 * 1024 * 1024,
+      // },
+      // storage: diskStorage({
+      //   filename: (req, file, cb) => {
+      //     cb(null, file.originalname);
+      //   },
+      // }),
+      // fileFilter: (req, file, cb) => {
+      //   console.log(`Uploading file: ${file.filename}, size limit: 20MB`);
+      //   cb(null, true);
+      // },
     }),
   )
   async uploadPdf(@UploadedFile() file: Express.Multer.File, @Request() req, @Body() fileSize: CreatePdfFileDto) {

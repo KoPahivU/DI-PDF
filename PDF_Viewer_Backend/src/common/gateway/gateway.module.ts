@@ -42,7 +42,6 @@ export class GateWayModule implements OnGatewayConnection, OnGatewayDisconnect {
     },
     @ConnectedSocket() client: Socket,
   ): void {
-    // console.log(`Message from ${client.id} to room ${data.pdfId}: ${data.message}`);
     client.to(data.pdfId).emit('msgToClient', {
       sender: client.id,
       message: data.message,

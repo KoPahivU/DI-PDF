@@ -14,6 +14,7 @@ import { AnnotationsModule } from '../annotations/annotations.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { RedisModule } from '@/common/redis/redis.module';
 import { EmailModule } from '@/mail/email.module';
+import { AwsModule } from '@/aws/aws.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { EmailModule } from '@/mail/email.module';
     RedisModule,
     CacheModule.register(),
     EmailModule,
+    AwsModule,
   ],
   controllers: [PdfFilesController, AuthController],
   providers: [PdfFilesService, AuthService, JwtStrategy, LocalStrategy],

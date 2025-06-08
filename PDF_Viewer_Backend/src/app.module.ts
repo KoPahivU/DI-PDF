@@ -18,6 +18,7 @@ import { GateWayModule } from './common/gateway/gateway.module';
 import { RedisModule } from './common/redis/redis.module';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { EmailModule } from './mail/email.module';
+import { AwsModule } from './aws/aws.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -56,6 +57,7 @@ import { EmailModule } from './mail/email.module';
       inject: [ConfigService],
     }),
     EmailModule,
+    AwsModule,
     CacheModule.register(),
     GateWayModule,
     UserModule,
