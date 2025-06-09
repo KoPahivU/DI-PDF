@@ -67,16 +67,36 @@ export function TextPop({ instance, selectedAnnot }: { instance: WebViewerInstan
             onChange={(e) => setFontFamily(e.target.value)}
           >
             <optgroup label="Font Family">
-              <option value="Helvetica">Helvetica</option>
-              <option value="Arimo">Arimo</option>
-              <option value="Caladea">Caladea</option>
-              <option value="Carlito">Carlito</option>
-              <option value="Cousine">Cousine</option>
-              <option value="Liberation Serif">Liberation Serif</option>
-              <option value="Open Sans">Open Sans</option>
-              <option value="Roboto">Roboto</option>
-              <option value="Roboto Mono">Roboto Mono</option>
-              <option value="Tinos">Tinos</option>
+              <option value="Helvetica" style={{ fontFamily: 'Helvetica' }}>
+                Helvetica
+              </option>
+              <option value="Arimo" style={{ fontFamily: 'Arimo' }}>
+                Arimo
+              </option>
+              <option value="Caladea" style={{ fontFamily: 'Caladea' }}>
+                Caladea
+              </option>
+              <option value="Carlito" style={{ fontFamily: 'Carlito' }}>
+                Carlito
+              </option>
+              <option value="Cousine" style={{ fontFamily: 'Cousine' }}>
+                Cousine
+              </option>
+              <option value="Liberation Serif" style={{ fontFamily: 'Liberation Serif' }}>
+                Liberation Serif
+              </option>
+              <option value="Open Sans" style={{ fontFamily: 'Open Sans' }}>
+                Open Sans
+              </option>
+              <option value="Roboto" style={{ fontFamily: 'Roboto' }}>
+                Roboto
+              </option>
+              <option value="Roboto Mono" style={{ fontFamily: 'Roboto Mono' }}>
+                Roboto Mono
+              </option>
+              <option value="Tinos" style={{ fontFamily: 'Tinos' }}>
+                Tinos
+              </option>
             </optgroup>
           </select>
         </div>

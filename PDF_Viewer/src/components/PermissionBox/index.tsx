@@ -12,6 +12,7 @@ import { PermissionSuccess } from '../Popup/PermissionSuccess';
 import { PermissionError } from '../Popup/PermissionError';
 import { PermissionOnProcess } from '../Popup/PermissionOnProcess';
 import { useTranslation } from 'react-i18next';
+import { ToastContainer, toast, Bounce } from 'react-toastify';
 
 const cx = classNames.bind(styles);
 
@@ -27,6 +28,9 @@ export function PermissionBox({
   const { t } = useTranslation('components/PermissionBox');
 
   const token = Cookies.get('DITokens');
+
+  const notify = () => toast(t('Link coppied!'));
+
   const [isPublic, setIsPublic] = useState<boolean>(pdfData?.isPublic || false);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -148,8 +152,8 @@ export function PermissionBox({
   };
 
   return (
-    <div className={cx('modal-overlay')}>
-      <div className={cx('modal')}>
+    <div className={cx('modal-overlay')} onClick={() => setPermissionPopup(false)}>
+      <div className={cx('modal')} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <h1 style={{ fontSize: '2.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {t('Share')} '{pdfData?.fileName}'
@@ -195,6 +199,8 @@ export function PermissionBox({
                     .catch((err) => {
                       console.error('Error: ', err);
                     });
+
+                  notify();
                 }}
               />
             </div>
@@ -221,6 +227,8 @@ export function PermissionBox({
                     .catch((err) => {
                       console.error('Error: ', err);
                     });
+
+                  notify();
                 }}
               />
             </div>
@@ -269,6 +277,19 @@ export function PermissionBox({
       {saveSuccess && <PermissionSuccess setSaveSuccess={setSaveSuccess} />}
       {saveError && <PermissionError setSaveError={setSaveError} />}
       {saveIsLoading && <PermissionOnProcess saveProgress={saveProgress} />}
+      <ToastContainer
+        position="bottom-right"
+        autoClose={1000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick={false}
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+        transition={Bounce}
+      />
     </div>
   );
 }

@@ -30,12 +30,18 @@
   margin-left: auto;
   display: block;
   cursor: pointer;
+  transition: transform ease-in 0.5s;
+
+  &:hover {
+    color: rgb(205, 30, 30);
+    transform: scale(1.1);
+  }
 }
 
 .user-list {
   height: 160px;
   overflow-y: auto;
-  border: 1px solid #ddd;
+  border: 1px solid #aaaaaa;
   border-radius: 6px;
   padding: 5px;
   margin-bottom: 10px;

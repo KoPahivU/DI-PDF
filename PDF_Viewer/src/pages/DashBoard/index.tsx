@@ -68,7 +68,7 @@ interface fileData {
 function DashBoard() {
   const { t } = useTranslation('pages/DashBoard');
 
-  const token = Cookies.get('DITokens');
+  const [token, setToken] = useState<string | undefined>(Cookies.get('DITokens'));
   const navigate = useNavigate();
   const profile = useAuth();
 
@@ -77,7 +77,6 @@ function DashBoard() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
 
   const [isDesc, setIsDesc] = useState<boolean>(true); //Mặc định từ gần tới xa
 
@@ -101,6 +100,20 @@ function DashBoard() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const [rows, setRows] = useState<fileData[]>([]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const currentToken = Cookies.get('DITokens');
+      setToken((prevToken) => {
+        if (prevToken !== currentToken) {
+          return currentToken;
+        }
+        return prevToken;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -139,7 +152,7 @@ function DashBoard() {
     e.stopPropagation();
 
     if (fileType === type) {
-      setDropdownOpen(false);
+      setDropdownOpen(!dropdownOpen);
     } else {
       setDropdownOpen(true);
       setType(fileType);
@@ -276,8 +289,7 @@ function DashBoard() {
       return false;
     }
   };
-  console.log(token);
-
+  
   const uploadFile = async () => {
     if (!file) return;
 
@@ -288,6 +300,7 @@ function DashBoard() {
       setWarningPopup(true);
       setTimeout(() => setWarningPopup(false), 2000);
       setFile(null);
+      return;
     }
 
     const body = new FormData();
@@ -442,8 +455,6 @@ function DashBoard() {
     };
   }, [isLoading, currentPage, pageCount]);
 
-  console.log(rows);
-
   return token ? (
     <div
       className={cx('wrapper')}
@@ -533,7 +544,7 @@ function DashBoard() {
 
       {/* Watch file */}
       {isNoDocs ? (
-        <DocsEmpty toggleDropdown={(e: React.MouseEvent) => toggleDropdown(e, FileType.DEFAULT)} />
+        <DocsEmpty handleLocalClick={handleLocalClick} handleDriveClick={handleDriveClick} />
       ) : (
         <>
           <TableContainer component={Paper} style={{ overflow: 'hidden' }}>
@@ -591,7 +602,7 @@ function DashBoard() {
                         <div style={{ display: 'flex', alignItems: 'center' }}>
                           <img
                             src={
-                              row?.avatar !== ''
+                              row.avatar
                                 ? row?.avatar
                                 : 'https://i.pinimg.com/736x/5e/e0/82/5ee082781b8c41406a2a50a0f32d6aa6.jpg'
                             }

@@ -34,7 +34,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
         avatarCloudinaryUrl = uploadResult.secure_url;
       }
 
-      console.log(profile);
       const user = await this.authService.validateGoogleUser({
         gmail: email,
         fullName,

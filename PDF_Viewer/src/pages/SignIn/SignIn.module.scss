@@ -10,8 +10,25 @@
   border: 0.5px solid rgba(162, 162, 162, 0.5);
 }
 
+@keyframes slideDown {
+  0% {
+    max-height: 0;
+    opacity: 0;
+  }
+  100% {
+    max-height: 600px;
+    opacity: 1;
+  }
+}
+
 .form {
   margin: 30px;
+  max-height: 0;
+  opacity: 0;
+  animation-fill-mode: forwards;
+  animation-duration: 1s;
+  animation-timing-function: ease;
+  animation-name: slideDown;
 }
 
 .form-header {
@@ -20,10 +37,12 @@
   justify-self: center;
   align-items: center;
 }
+
 .header-logo {
   height: 48px;
   width: 48px;
   padding-right: 5px;
+  cursor: pointer;
 }
 
 .google-button {
@@ -32,12 +51,15 @@
   margin-top: 40px;
   border-radius: 10px;
   border: 1.5px solid rgba(104, 103, 103, 0.5);
+  transition: all 0.6s ease;
   cursor: pointer;
   align-items: center;
   justify-content: center;
+  z-index: 1000;
 
   &:hover {
     border: 1.5px solid black;
+    transform: scale(1.02);
   }
 
   :hover .google-text {
@@ -146,19 +168,55 @@
 }
 
 .sign-button {
+  position: relative;
   margin-top: 20px;
-  background-color: #f5c731;
   padding: 11px;
-  text-align: center;
   font-size: 1.4rem;
   font-weight: 600;
-  border-radius: 10px;
   color: white;
+  background-color: #f5c731;
+  border-radius: 10px;
   cursor: pointer;
-  transition: transform 0.2s ease-in;
+  text-align: center;
+  overflow: hidden;
+  border: 2px solid transparent;
+
+  &:hover {
+    transform: scale(1.02);
+    transition: transform 0.6s ease;
+  }
+
+  &.disable {
+    cursor: not-allowed;
+  }
 
   &:active {
     transform: scale(0.95);
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: -40%;
+    width: 10%;
+    height: calc(100% - 2px);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+    border-radius: 8px;
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.7));
+    animation: shineMove 2s linear infinite;
+    pointer-events: none;
+    z-index: 2;
+    transform: skew(-20deg);
+  }
+}
+
+@keyframes shineMove {
+  0% {
+    left: -40%;
+  }
+  100% {
+    left: 100%;
   }
 }
 

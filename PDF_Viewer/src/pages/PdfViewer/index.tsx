@@ -31,6 +31,7 @@ import { OnSave } from '~/components/Popup/OnSave';
 import { useTranslation } from 'react-i18next';
 import { io, Socket } from 'socket.io-client';
 import { deletePDF, getPDFWithAnnotations, savePDFWithAnnotations, updateXFDF } from '~/utils/indexedDB';
+import { UploadWarning } from '~/components/Popup/UploadWarning';
 
 const cx = classNames.bind(styles);
 
@@ -68,13 +69,13 @@ const ZOOM_LEVELS = [50, 75, 90, 100, 125, 150, 200];
 const PdfViewer: React.FC = () => {
   const { t } = useTranslation('pages/PdfViewer');
 
-  const token = Cookies.get('DITokens');
+  const [token, setToken] = useState<string | undefined>(Cookies.get('DITokens'));
   const navigate = useNavigate();
-  const profile = useAuth();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const shared = searchParams.get('shared');
 
+  const [warningPopup, setWarningPopup] = useState<Boolean>(false);
   const [permissionPopup, setPermissionPopup] = useState(false);
 
   const [pdfData, setPdfData] = useState<PdfData | null>(null);
@@ -104,6 +105,20 @@ const PdfViewer: React.FC = () => {
 
   const isImporting = useRef(false);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const currentToken = Cookies.get('DITokens');
+      setToken((prevToken) => {
+        if (prevToken !== currentToken) {
+          return currentToken;
+        }
+        return prevToken;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // const socket = io(process.env.REACT_APP_SOCKET_URI);
 
   const socket = useRef<Socket | null>(null);
@@ -121,12 +136,16 @@ const PdfViewer: React.FC = () => {
 
   useEffect(() => {
     socket.current?.on('msgToClient', (data) => {
-      console.log(Boolean(data.message), '   ', Boolean(isDocumentLoaded));
+      console.log('Message receive: ', data.message, ' ', isDocumentLoaded);
       if (data.message && isDocumentLoaded) {
         isImporting.current = true;
-        annotationManager.importAnnotations(data.message).then(() => {
-          isImporting.current = false;
-        });
+
+        const annots = annotationManager.getAnnotationsList();
+        annotationManager.deleteAnnotations(annots, { force: true });
+
+        // Sau khi xóa, import ngay (vì không bất đồng bộ)
+        annotationManager.importAnnotations(data.message);
+        isImporting.current = false;
       }
     });
   }, [isDocumentLoaded, annotationManager, socket]);
@@ -149,7 +168,7 @@ const PdfViewer: React.FC = () => {
           setFileStatus('No permission');
           if (id) deletePDF(id);
         }
-        throw new Error(errorData.message || 'Failed to fetch PDF');
+        console.log(errorData.message || 'Failed to fetch PDF');
       }
 
       const responseData = await res.json();
@@ -178,15 +197,22 @@ const PdfViewer: React.FC = () => {
 
   // Áp dụng annotations
   useEffect(() => {
-    if (xfdf && isDocumentLoaded && annotationManager) {
-      annotationManager.importAnnotations(xfdf);
-    }
+    const importAnnotate = async () => {
+      if (xfdf && isDocumentLoaded && annotationManager) {
+        isImporting.current = true;
+        annotationManager.importAnnotations(xfdf).then(() => {
+          isImporting.current = false;
+        });
+      }
+    };
+    importAnnotate();
   }, [xfdf, isDocumentLoaded, annotationManager, pdfData]);
 
   const postAnnotations = async () => {
     try {
       setOnSave(true);
       const xfdfString = await annotationManagerRef.current?.exportAnnotations();
+      if (!xfdfString) return;
       setXfdf(xfdfString);
       if (id) updateXFDF(id, xfdfString);
 
@@ -229,19 +255,21 @@ const PdfViewer: React.FC = () => {
 
         let stored = await getPDFWithAnnotations(id);
         if (!stored) {
-          console.log('fetchPdfData');
+          console.log('fetchPdfData', result);
+
           if (!result) return;
           const { newPdfData, xfdfData } = result;
           const saveToIndexedDB = async () => {
             const response = await fetch(newPdfData.url);
             const blob = await response.blob();
             savePDFWithAnnotations(newPdfData._id, blob, newPdfData.fileName, xfdfData);
-            console.log('Saved to IndexDB');
+            // console.log('Saved to IndexDB');
           };
 
           await saveToIndexedDB();
 
           stored = await getPDFWithAnnotations(id);
+          // console.log('fetchPdfData', stored);
         }
 
         if (stored) {
@@ -277,7 +305,12 @@ const PdfViewer: React.FC = () => {
     if (!pdfData || !webViewerInitialized.current) return;
 
     if (instance) {
-      instance.UI.downloadPdf({ filename: pdfData.fileName });
+      try {
+        instance.UI.downloadPdf({ filename: pdfData.fileName });
+      } catch {
+        setWarningPopup(true);
+        setInterval(() => setWarningPopup(false), 1000);
+      }
     }
   };
 
@@ -308,11 +341,12 @@ const PdfViewer: React.FC = () => {
         instance.UI.loadDocument(pdfBlob.file, { filename: pdfBlob.fileName });
       } else instance.UI.loadDocument(pdfData.url, { filename: pdfData.fileName });
 
-      Object.values(instance.UI.hotkeys.Keys).forEach((key) => {
-        if (key === 'p' || key === 'ctrl+z' || key === 'escape') {
-          return;
+      const allowedKeys = new Set(['p', 'ctrl+z', 'escape', 'ctrl+y', 'f', 't', 'o', 'r', 'a', 'l']);
+
+      (Object.values(instance.UI.hotkeys.Keys) as string[]).forEach((key) => {
+        if (!allowedKeys.has(key)) {
+          instance.UI.hotkeys.off(key);
         }
-        instance.UI.hotkeys.off(key as string);
       });
 
       instance.Core.documentViewer.addEventListener('documentLoaded', () => {
@@ -320,6 +354,10 @@ const PdfViewer: React.FC = () => {
         instance.UI.setZoomLevel(`${zoomLevel}%`);
         instance.UI.setLayoutMode(instance.UI.LayoutMode.Single);
         setTotalPages(instance?.Core.documentViewer.getPageCount());
+      });
+
+      instance.Core.documentViewer.addEventListener('pageNumberUpdated', (pageNumber) => {
+        setCurrentPage(pageNumber);
       });
 
       const { annotationManager } = instance.Core;
@@ -338,7 +376,7 @@ const PdfViewer: React.FC = () => {
 
       annotationManager.addEventListener('annotationChanged', async (annotations, action) => {
         if (isImporting.current) return;
-        if (action === 'add' || action === 'modify') {
+        if (action === 'add' || action === 'modify' || action === 'delete') {
           const xfdf = await annotationManager.exportAnnotations();
           console.log('Send message');
           socket.current?.emit('msgToServer', {
@@ -377,7 +415,7 @@ const PdfViewer: React.FC = () => {
 
   const handleMouseClick = (event: React.MouseEvent) => {
     const popupWidth = 300;
-    const popupHeight = 300;
+    const popupHeight = 200;
 
     let x = event.clientX;
     let y = event.clientY;
@@ -409,7 +447,7 @@ const PdfViewer: React.FC = () => {
 
     const onZoomUpdated = () => {
       const zoom = instance.Core.documentViewer.getZoomLevel();
-      setZoomLevel(zoom * 100); // Convert to percent
+      setZoomLevel(zoom * 100);
     };
 
     instance.Core.documentViewer.addEventListener('zoomUpdated', onZoomUpdated);
@@ -545,7 +583,7 @@ const PdfViewer: React.FC = () => {
     return <NoPermission />;
   }
 
-  if ((token && !profile) || (!pdfData && !pdfBlob)) {
+  if (token && (!pdfData || !pdfBlob)) {
     return (
       <div
         style={{
@@ -636,9 +674,7 @@ const PdfViewer: React.FC = () => {
               overflowY: 'hidden',
             }}
             onClick={handleMouseClick}
-          >
-            {/* Render PDF pages here */}
-          </div>
+          ></div>
 
           <div>
             <div
@@ -822,10 +858,10 @@ const PdfViewer: React.FC = () => {
       {selectedAnnot && popupPosition && pdfData && pdfData.access !== 'View' && pdfData.access !== 'Guest' && (
         <div
           style={{
-            position: 'fixed', // 🔥 đổi từ 'absolute' thành 'fixed' để khớp với clientX/clientY
+            position: 'fixed',
             top: popupPosition.y - 50,
             left: popupPosition.x - 50,
-            backgroundColor: '#fff',
+            backgroundColor: 'transparent',
             zIndex: 1001,
             boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
             borderRadius: '10px',
@@ -841,6 +877,12 @@ const PdfViewer: React.FC = () => {
       )}
 
       {onSave && <OnSave />}
+      {warningPopup && (
+        <UploadWarning
+          setWarningPopup={setWarningPopup}
+          text={t('Unable to download the document. Please reload the page and try again.')}
+        />
+      )}
     </div>
   );
 };

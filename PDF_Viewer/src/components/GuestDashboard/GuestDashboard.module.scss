@@ -25,3 +25,16 @@
 .user-icon:hover {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
+
+.sign-in {
+  transition: transform ease-in 0.4s;
+
+  &:hover {
+    transform: scale(1.05);
+    color: #ecb914 !important;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}

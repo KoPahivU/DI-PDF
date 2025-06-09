@@ -112,8 +112,6 @@ export class PdfFilesService {
       } catch (error) {
         type = FileType.DEFAULT;
         storagePath = fileKey;
-        console.error('LuminPDF API error:', error);
-
         if (axios.isAxiosError(error)) {
           console.error('Axios error response data:', error.response?.data);
           console.error('Axios error status:', error.response?.status);
@@ -143,9 +141,6 @@ export class PdfFilesService {
       xfdf: xfdfDefault,
     });
 
-    const cached = await this.redisClient.set(newPdfFile._id.toString(), JSON.stringify(newAnnotation), 'EX', 300);
-    console.log('Annotation from cache:', cached);
-
     return {
       newRecent,
       newPdfFile,
@@ -173,6 +168,10 @@ export class PdfFilesService {
   }
 
   async getPdf(fileId: Types.ObjectId | string, userId: Types.ObjectId | string, shared: string | null) {
+    if (!Types.ObjectId.isValid(fileId)) {
+      throw new BadRequestException('File id not found');
+    }
+
     const file = await this.pdfFileModel.findById(fileId);
 
     if (!file) throw new BadRequestException('File id not found');
@@ -189,31 +188,30 @@ export class PdfFilesService {
     }
     if (permission === undefined && !shared) throw new BadRequestException('You have no permission');
 
-    const cacheKey = fileId.toString();
-    let annotation: string | null = await this.redisClient.get(cacheKey);
-
     // Nếu cache không có, lấy từ DB
+    const annotation = await this.annotationModel.findOne({ pdfId: file._id });
+
     if (!annotation) {
-      annotation = await this.annotationModel.findOne({ pdfId: file._id });
-
-      if (!annotation) {
-        throw new BadRequestException('Annotation not found');
-      }
-
-      await this.redisClient.set(cacheKey, JSON.stringify(annotation), 'EX', 300);
-      console.log('New cache data.');
+      throw new BadRequestException('Annotation not found');
     }
 
     const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
 
     const ownerInformation = await this.userModel.findById(file.ownerId);
 
-    if (typeof annotation === 'string') annotation = JSON.parse(annotation);
+    const cacheKey = fileId.toString();
 
-    let presignedUrl: string | null;
+    let presignedUrl: string | null = await this.redisClient.get(cacheKey);
+    // console.log('URL', presignedUrl);
 
-    if (file.type === FileType.DEFAULT) presignedUrl = await this.awsService.getPresignedUrl(file.storagePath, 3600);
-    else presignedUrl = await this.getLuminFile(file.storagePath);
+    if (!presignedUrl) {
+      if (file.type === FileType.DEFAULT) presignedUrl = await this.awsService.getPresignedUrl(file.storagePath, 3600);
+      else presignedUrl = await this.getLuminFile(file.storagePath);
+
+      if (!presignedUrl) return;
+      await this.redisClient.set(cacheKey, presignedUrl, 'EX', 3600);
+      console.log('New cache data: ', await this.redisClient.get(cacheKey));
+    }
 
     if (shared) {
       const sharedItem = file.sharedLink.find((link) => link.token === shared);
@@ -314,6 +312,8 @@ export class PdfFilesService {
 
   async handleCheckUserPermission(userId: string | Types.ObjectId, userPermission: AddUserPermissionDto) {
     const file = await this.pdfFileModel.findById(userPermission.fileId);
+
+    console.log('file: ', file);
 
     if (!file) throw new BadRequestException('File id not found');
 

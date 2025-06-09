@@ -28,14 +28,10 @@ export function SearchUser({
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [userData, setUserData] = useState<User[]>([]);
-  console.log('Search data: ', userData);
   const [showDropdown, setShowDropdown] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null);
-
-  console.log(sharedUser);
-  console.log(userData);
 
   useEffect(() => {
     if (searchTerm === '') {
@@ -137,7 +133,13 @@ export function SearchUser({
                 }
               }}
             >
-              <img src={user.avatar} alt="avatar" className={cx('avatar')} />
+              <img
+                src={
+                  user.avatar ? user.avatar : 'https://i.pinimg.com/736x/5e/e0/82/5ee082781b8c41406a2a50a0f32d6aa6.jpg'
+                }
+                alt="avatar"
+                className={cx('avatar')}
+              />
               <div className={cx('info')}>
                 <strong style={{ fontSize: '1.6rem' }}>{user.fullName || 'No Name'}</strong>
                 <span style={{ fontSize: '1.4rem' }}>{user.gmail}</span>

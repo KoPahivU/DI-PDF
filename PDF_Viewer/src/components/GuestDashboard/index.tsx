@@ -16,7 +16,7 @@ export function GuestDashboard() {
       <FontAwesomeIcon className={cx('user-icon')} icon={faUser} />
       <h1 style={{ display: 'flex', gap: '5px', fontSize: '2rem', fontWeight: '400' }}>
         {t('Please')}
-        <strong style={{ cursor: 'pointer', color: '#f5c731' }} onClick={() => navigate('/auth/signin')}>
+        <strong className={cx('sign-in')} style={{ cursor: 'pointer', color: '#f5c731' }} onClick={() => navigate('/auth/signin')}>
           {t('Sign In')}
         </strong>
         {t('to experience more features')}...

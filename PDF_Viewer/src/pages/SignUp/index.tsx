@@ -7,7 +7,6 @@ import email from '~/assets/svg/email.svg';
 import { useNavigate } from 'react-router-dom';
 import styles from './SignUp.module.scss';
 import classNames from 'classnames/bind';
-import Cookies from 'js-cookie';
 import { useTranslation } from 'react-i18next';
 
 const cx = classNames.bind(styles);
@@ -174,7 +173,7 @@ function SignUp() {
     <div className={cx('wrapper')}>
       <div className={cx('form')}>
         <div className={cx('form-header')}>
-          <img className={cx('header-logo')} src={logo} alt="Logo" />
+          <img className={cx('header-logo')} src={logo} alt="Logo" onClick={() => navigate('/')} />
           <h1 className={cx('sign-header')}>{t('Sign Up')}</h1>
         </div>
 
@@ -196,12 +195,6 @@ function SignUp() {
           <span className={cx('or-text')}>{t('or')}</span>
           <span className={cx('line')}></span>
         </div>
-
-        {/* {error === 'gmail-account' && (
-          <div className={cx('error-text')}>
-            <span>This email address is associated with a Google account. Please sign in using Google Sign-In.</span>
-          </div>
-        )} */}
 
         <div className={cx('container')}>
           <div className={cx('describe')}>

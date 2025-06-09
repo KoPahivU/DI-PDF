@@ -188,3 +188,16 @@
   width: 30%;
   height: 12px;
 }
+
+.top-page {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  height: 24px;
+  width: 24px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid black;
+  cursor: pointer;
+  z-index: 1000;
+}

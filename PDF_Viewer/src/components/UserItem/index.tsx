@@ -74,6 +74,8 @@ export function UserItem({ sharedUser, setSharedUser }: { sharedUser: SharedUser
     }
   };
 
+  console.log(userData?.avatar);
+
   return (
     <div
       style={{

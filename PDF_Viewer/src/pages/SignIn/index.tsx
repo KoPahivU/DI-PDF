@@ -126,7 +126,7 @@ function SignIn() {
     <div className={cx('wrapper')}>
       <div className={cx('form')}>
         <div className={cx('form-header')}>
-          <img className={cx('header-logo')} src={logo} alt="Logo" />
+          <img className={cx('header-logo')} src={logo} alt="Logo" onClick={() => navigate('/')} />
           <h1 className={cx('sign-header')}>{t('Sign In')}</h1>
         </div>
 

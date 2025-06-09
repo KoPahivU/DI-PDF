@@ -44,19 +44,6 @@ function Header() {
 
   const [hiddenBox, setHiddenBox] = useState<boolean>(false);
 
-  // useEffect(() => {
-  //   const handleClickOutside = (event: MouseEvent) => {
-  //     if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-  //       setHiddenBox(false);
-  //     }
-  //   };
-
-  //   document.addEventListener('mousedown', handleClickOutside);
-  //   return () => {
-  //     document.removeEventListener('mousedown', handleClickOutside);
-  //   };
-  // }, []);
-
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const languageRef = useRef<HTMLDivElement | null>(null);
 

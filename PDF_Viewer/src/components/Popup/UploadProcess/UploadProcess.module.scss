@@ -9,8 +9,23 @@
   padding: 6px;
   max-width: 400px;
 
+  transform: translateX(100%);
+  opacity: 0;
+  animation: slideInFromRight 0.5s ease-out forwards;
+
   * {
     color: #f5c731;
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
   }
 }
 

@@ -12,7 +12,10 @@ export function UploadWarning({ setWarningPopup, text }: { setWarningPopup: Func
   return (
     <div className={cx('error-popup')}>
       <div style={{ display: 'flex', gap: '5px' }}>
-        <FontAwesomeIcon style={{ width: '25px', height: '25px' }} icon={faTriangleExclamation} />
+        <FontAwesomeIcon
+          style={{ width: '25px', height: '25px', alignSelf: 'center', marginRight: '3px' }}
+          icon={faTriangleExclamation}
+        />
         <div>
           <h4> {t('Cannot upload this file')}</h4>
           <span style={{ maxWidth: '400px', fontSize: '1.3rem' }}>{text}</span>
