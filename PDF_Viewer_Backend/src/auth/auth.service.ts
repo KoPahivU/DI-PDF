@@ -18,7 +18,6 @@ export class AuthService {
     private userService: UserService,
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private jwtService: JwtService,
-    private readonly mailerService: MailerService,
     @Inject('EMAIL_SERVICE') private client: ClientProxy,
   ) {}
 
@@ -109,45 +108,45 @@ export class AuthService {
     return await this.userService.handleActiveAccount(codeId);
   }
 
-  async changePassword(userId, oldPassword: string, newPassword: string) {
-    const user = await this.userModel.findById(userId);
+  // async changePassword(userId, oldPassword: string, newPassword: string) {
+  //   const user = await this.userModel.findById(userId);
 
-    if (!user) {
-      throw new NotFoundException('User not found...');
-    }
+  //   if (!user) {
+  //     throw new NotFoundException('User not found...');
+  //   }
 
-    const passwordMatch = await bcrypt.compare(oldPassword, user.password);
-    if (!passwordMatch) {
-      throw new UnauthorizedException('Wrong credentials');
-    }
+  //   const passwordMatch = await bcrypt.compare(oldPassword, user.password);
+  //   if (!passwordMatch) {
+  //     throw new UnauthorizedException('Wrong credentials');
+  //   }
 
-    const newHashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = newHashedPassword;
-    await user.save();
-  }
+  //   const newHashedPassword = await bcrypt.hash(newPassword, 10);
+  //   user.password = newHashedPassword;
+  //   await user.save();
+  // }
 
-  async forgotPassword(gmail: string) {
-    const user = await this.userModel.findOne({ gmail });
+  // async forgotPassword(gmail: string) {
+  //   const user = await this.userModel.findOne({ gmail });
 
-    if (user) {
-      const payload = { username: user?.gmail, sub: user?._id };
-      const token = this.jwtService.sign(payload);
+  //   if (user) {
+  //     const payload = { username: user?.gmail, sub: user?._id };
+  //     const token = this.jwtService.sign(payload);
 
-      this.mailerService.sendMail({
-        to: user.gmail,
-        subject: 'Password Reset Request',
-        template: 'forgot_password',
-        context: {
-          name: user.fullName,
-          resetLink: `${process.env.FE_URI}/reset-password?token=${token}`,
-        },
-      });
+  //     this.mailerService.sendMail({
+  //       to: user.gmail,
+  //       subject: 'Password Reset Request',
+  //       template: 'forgot_password',
+  //       context: {
+  //         name: user.fullName,
+  //         resetLink: `${process.env.FE_URI}/reset-password?token=${token}`,
+  //       },
+  //     });
 
-      return 'Email sended';
-    }
+  //     return 'Email sended';
+  //   }
 
-    throw new NotFoundException('Gmail not found...');
-  }
+  //   throw new NotFoundException('Gmail not found...');
+  // }
 
   async validateGoogleUser(googleUser: GoogleUserDto) {
     const user = await this.userService.findByGmail(googleUser.gmail);

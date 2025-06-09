@@ -9,7 +9,6 @@ import { JwtStrategy } from '@/auth/passport/jwt.strategy';
 import { LocalStrategy } from '@/auth/passport/local.strategy';
 import { AuthService } from '@/auth/auth.service';
 import { EmailModule } from '@/mail/email.module';
-import { EmailConsumer } from '@/mail/email.consumer';
 
 @Module({
   imports: [

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -13,6 +13,7 @@ import { JwtService } from '@nestjs/jwt';
 import { SearchFileDto } from './dto/search-file.dto';
 import { PdfFile } from '../pdf-files/schemas/pdf-file.schema';
 import { PaginationDto } from '@/common/dto/pagination.dto';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class UserService {
@@ -22,7 +23,7 @@ export class UserService {
     @InjectModel(User.name)
     private readonly userModel: Model<User>,
     private jwtService: JwtService,
-    private readonly mailerService: MailerService,
+    @Inject('EMAIL_SERVICE') private client: ClientProxy,
   ) {}
 
   isEmailExist = async (gmail: string) => {
@@ -137,22 +138,10 @@ export class UserService {
       usedStorage: 0,
     });
 
-    this.mailerService.sendMail({
+    await this.client.emit('send_activation_email', {
       to: user.gmail,
-      subject: 'Activate your DI PDF account',
-      template: 'register',
-      context: {
-        url: process.env.FE_URI,
-        name: user?.fullName ?? user.gmail,
-        activationCode: codeId,
-      },
-      attachments: [
-        {
-          filename: 'logo.png',
-          path: process.cwd() + '/src/mail/assets/logo.png',
-          cid: 'logo',
-        },
-      ],
+      name: user.fullName ?? user.gmail,
+      code: codeId,
     });
 
     return {
