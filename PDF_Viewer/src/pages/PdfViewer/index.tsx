@@ -231,7 +231,7 @@ const PdfViewer: React.FC = () => {
       if (!res.ok) {
         const errorData = await res.json();
         console.log('Error Response:', errorData);
-        throw new Error(errorData.message || 'Invalid credentials');
+        // throw new Error(errorData.message || 'Invalid credentials');
       }
 
       // const responseData = await res.json();

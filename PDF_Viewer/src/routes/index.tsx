@@ -7,7 +7,6 @@ import DashBoard from '../pages/DashBoard';
 import SignIn from '../pages/SignIn';
 import SignUp from '../pages/SignUp';
 import PdfViewer from '../pages/PdfViewer';
-import { Test } from '~/pages/Test';
 
 type LayoutType = ComponentType<{ children: ReactNode }>;
 
@@ -24,7 +23,6 @@ const publicRoutes: RouteType[] = [
   { path: '/auth/signup', Component: SignUp, layout: AuthLayout },
   { path: '/auth/activate', Component: Active, layout: EmptyLayout },
   { path: '/file/:id', Component: PdfViewer, layout: DashBoardLayout },
-  { path: '/test', Component: Test, layout: DashBoardLayout },
 ];
 
 const privateRoutes: RouteType[] = [];
